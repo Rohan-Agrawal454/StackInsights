@@ -129,15 +129,15 @@ export default function Index() {
       </section>
 
       {/* CTA */}
-      <section className="border-t border-border bg-primary py-12 md:py-16">
+      <section className="border-t border-border bg-muted/30 py-12 md:py-16">
         <div className="container text-center">
-          <h2 className="text-2xl font-semibold text-primary-foreground md:text-3xl">
+          <h2 className="text-2xl font-semibold text-text-primary md:text-3xl">
             Have something to share?
           </h2>
-          <p className="mt-3 text-primary-foreground/80">
+          <p className="mt-3 text-text-secondary">
             Every insight, incident, and retrospective helps the team grow.
           </p>
-          <Button asChild size="lg" variant="secondary" className="mt-6">
+          <Button asChild size="lg" className="mt-6">
             <Link to="/create">Create a Post</Link>
           </Button>
         </div>

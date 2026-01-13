@@ -1,11 +1,12 @@
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Calendar, Tag, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, Tag, ChevronRight, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { PostCard } from '@/components/posts/PostCard';
 import { posts, getCategoryLabel, getCategoryColor, type Post } from '@/lib/data';
+import { cn } from '@/lib/utils';
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
@@ -113,65 +114,104 @@ export default function PostDetail() {
           <Separator className="my-8" />
 
           {/* Content - Structured sections */}
-          <div className="prose-stack">
-            <section>
-              <h2>Context</h2>
-              <p>
-                This document outlines the key details and background information relevant to this {getCategoryLabel(post.category).toLowerCase()}. 
-                Understanding the context is crucial for appreciating the decisions made and lessons learned.
-              </p>
-              <p>
-                Our team has been working on improving system reliability and performance. 
-                This particular case provides valuable insights into our approach and outcomes.
-              </p>
-            </section>
+          <div className="space-y-6">
+            {post.content.context && (
+              <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", getCategoryColor(post.category))}>
+                    <Info className="h-5 w-5" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-text-primary">Context</h2>
+                </div>
+                <div className="prose-stack">
+                  <p className="text-text-secondary leading-relaxed">{post.content.context}</p>
+                </div>
+              </section>
+            )}
 
-            <section>
-              <h2>Problem Statement</h2>
-              <p>
-                The core challenge we faced involved multiple interconnected systems and required careful analysis 
-                to identify the root cause. Initial symptoms were subtle but grew more pronounced over time.
-              </p>
-              <ul>
-                <li>First observed on routine monitoring dashboards</li>
-                <li>Customer reports began trickling in shortly after</li>
-                <li>Full scope became clear during investigation</li>
-              </ul>
-            </section>
+            {post.content.problem && (
+              <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-incident/10">
+                    <AlertCircle className="h-5 w-5 text-incident" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-text-primary">Problem Statement</h2>
+                </div>
+                <div className="prose-stack">
+                  <p className="text-text-secondary leading-relaxed">{post.content.problem}</p>
+                </div>
+              </section>
+            )}
 
-            <section>
-              <h2>Resolution</h2>
-              <p>
-                After thorough investigation and collaborative problem-solving, we implemented a multi-faceted solution:
-              </p>
-              <pre><code>{`// Example configuration change
-{
-  "connectionPool": {
-    "maxSize": 50,
-    "minSize": 10,
-    "idleTimeout": 30000
-  }
-}`}</code></pre>
-              <p>
-                The fix was deployed in stages, with careful monitoring at each step to ensure stability.
-              </p>
-            </section>
+            {post.content.resolution && (
+              <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-retro/10">
+                    <CheckCircle className="h-5 w-5 text-retro" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-text-primary">Resolution</h2>
+                </div>
+                <div className="prose-stack">
+                  <p className="text-text-secondary leading-relaxed">{post.content.resolution}</p>
+                </div>
+              </section>
+            )}
 
-            <section>
-              <h2>Key Learnings</h2>
-              <p>
-                This experience reinforced several important principles that we'll carry forward:
-              </p>
-              <ol>
-                <li><strong>Proactive monitoring</strong> - Early detection saves significant time and resources</li>
-                <li><strong>Clear communication</strong> - Keeping stakeholders informed reduces confusion</li>
-                <li><strong>Documentation</strong> - Writing things down helps future troubleshooting</li>
-                <li><strong>Blameless culture</strong> - Focus on systems, not individuals</li>
-              </ol>
-              <blockquote>
-                "Every incident is an opportunity to make our systems more resilient."
-              </blockquote>
-            </section>
+            {post.content.achievements && (
+              <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-insight/10">
+                    <Target className="h-5 w-5 text-insight" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-text-primary">Achievements</h2>
+                </div>
+                <div className="prose-stack">
+                  <p className="text-text-secondary leading-relaxed">{post.content.achievements}</p>
+                </div>
+              </section>
+            )}
+
+            {post.content.challenges && (
+              <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                    <TrendingUp className="h-5 w-5 text-text-secondary" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-text-primary">Challenges</h2>
+                </div>
+                <div className="prose-stack">
+                  <p className="text-text-secondary leading-relaxed">{post.content.challenges}</p>
+                </div>
+              </section>
+            )}
+
+            {post.content.improvements && (
+              <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                    <BookOpen className="h-5 w-5 text-accent" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-text-primary">Improvements</h2>
+                </div>
+                <div className="prose-stack">
+                  <p className="text-text-secondary leading-relaxed">{post.content.improvements}</p>
+                </div>
+              </section>
+            )}
+
+            {post.content.learnings && (
+              <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                    <Lightbulb className="h-5 w-5 text-accent" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-text-primary">Key Learnings</h2>
+                </div>
+                <div className="prose-stack">
+                  <p className="text-text-secondary leading-relaxed">{post.content.learnings}</p>
+                </div>
+              </section>
+            )}
           </div>
 
           <Separator className="my-8" />

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Plus, User, FileText, LogOut } from 'lucide-react';
+import { Search, Menu, X, Plus, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import logoImage from '@/assets/logo.png';
@@ -34,7 +34,7 @@ export function Navbar() {
           <img 
             src={logoImage} 
             alt="StackInsights" 
-            className="h-12 w-auto"
+            className="h-10 w-auto"
           />
           <span className="hidden font-semibold text-text-primary sm:inline-block">
             StackInsights
@@ -99,12 +99,12 @@ export function Navbar() {
                   My Profile
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/browse?author=1" className="flex items-center">
+              {/* <DropdownMenuItem asChild>
+                <Link to="/profile/1" className="flex items-center">
                   <FileText className="mr-2 h-4 w-4" />
                   My Posts
                 </Link>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />

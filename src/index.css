@@ -237,9 +237,14 @@
   }
   
   .prose-stack p {
-    margin-bottom: 1rem;
-    line-height: 1.625;
+    margin-bottom: 1.25rem;
+    line-height: 1.75;
     color: hsl(var(--text-secondary));
+    font-size: 1rem;
+  }
+  
+  .prose-stack p:last-child {
+    margin-bottom: 0;
   }
   
   .prose-stack pre {

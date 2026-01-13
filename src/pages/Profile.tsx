@@ -1,5 +1,5 @@
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Mail, MapPin, Building, Sun, Moon } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Mail, MapPin, Building, Sun, Moon, Edit } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -10,6 +10,7 @@ import { authors, posts } from '@/lib/data';
 
 export default function Profile() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const author = authors.find(a => a.id === id);
   
@@ -73,7 +74,7 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <MapPin className="h-4 w-4" />
-                  <span>Hybrid</span>
+                  <span>{author.location}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Mail className="h-4 w-4" />
@@ -114,7 +115,22 @@ export default function Profile() {
           {authorPosts.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {authorPosts.map(post => (
-                <PostCard key={post.id} post={post} />
+                <div key={post.id} className="relative">
+                  <PostCard post={post} />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      navigate(`/edit/${post.id}`);
+                    }}
+                    className="absolute top-3 right-3 z-10 h-7 gap-1.5 bg-card/95 backdrop-blur-sm shadow-sm hover:bg-card border border-border"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                    <span className="text-xs">Edit</span>
+                  </Button>
+                </div>
               ))}
             </div>
           ) : (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Send, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -15,23 +15,40 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { teams, categories, getCategoryLabel, getCategoryColor, allTags, type PostCategory } from '@/lib/data';
+import { teams, categories, getCategoryLabel, getCategoryColor, allTags, posts, type PostCategory } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-export default function CreatePost() {
+export default function EditPost() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<string>('');
-  const [team, setTeam] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [context, setContext] = useState('');
-  const [problem, setProblem] = useState('');
-  const [resolution, setResolution] = useState('');
-  const [achievements, setAchievements] = useState('');
-  const [challenges, setChallenges] = useState('');
-  const [improvements, setImprovements] = useState('');
-  const [learnings, setLearnings] = useState('');
+  const post = posts.find((p) => p.id === id);
+
+  const [title, setTitle] = useState(() => post?.title || '');
+  const [category, setCategory] = useState<string>(() => post?.category || '');
+  const [team, setTeam] = useState(() => post?.team || '');
+  const [selectedTags, setSelectedTags] = useState<string[]>(() => post?.tags || []);
+  const [context, setContext] = useState(() => post?.content.context || '');
+  const [problem, setProblem] = useState(() => post?.content.problem || '');
+  const [resolution, setResolution] = useState(() => post?.content.resolution || '');
+  const [achievements, setAchievements] = useState(() => post?.content.achievements || '');
+  const [challenges, setChallenges] = useState(() => post?.content.challenges || '');
+  const [improvements, setImprovements] = useState(() => post?.content.improvements || '');
+  const [learnings, setLearnings] = useState(() => post?.content.learnings || '');
+
+  if (!post) {
+    return (
+      <Layout>
+        <div className="container py-16 text-center">
+          <h1 className="text-2xl font-semibold text-text-primary">Post not found</h1>
+          <Button asChild className="mt-4">
+            <Link to="/browse">Back to Browse</Link>
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
@@ -42,23 +59,24 @@ export default function CreatePost() {
   const handleSaveDraft = () => {
     toast({
       title: "Draft saved",
-      description: "Your post has been saved as a draft.",
+      description: "Your changes have been saved as a draft.",
     });
   };
 
-  const handlePublish = () => {
+  const handleUpdate = () => {
     if (!title || !category || !team || !context) {
       toast({
         title: "Missing fields",
-        description: "Please fill in title, category, team, and context before publishing.",
+        description: "Please fill in title, category, team, and context before updating.",
         variant: "destructive",
       });
       return;
     }
     toast({
-      title: "Post published!",
-      description: "Your post is now live and visible to the team.",
+      title: "Post updated!",
+      description: "Your post has been successfully updated.",
     });
+    navigate(`/post/${post.id}`);
   };
 
   const isInsight = category === 'insight';
@@ -73,20 +91,20 @@ export default function CreatePost() {
           <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link to="/browse">
+                <Link to={`/post/${post.id}`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
-              <h1 className="text-2xl font-bold text-text-primary">Create Post</h1>
+              <h1 className="text-2xl font-bold text-text-primary">Edit Post</h1>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleSaveDraft}>
                 <Save className="mr-2 h-4 w-4" />
                 Save Draft
               </Button>
-              <Button onClick={handlePublish}>
+              <Button onClick={handleUpdate}>
                 <Send className="mr-2 h-4 w-4" />
-                Publish
+                Update Post
               </Button>
             </div>
           </div>
@@ -168,7 +186,7 @@ export default function CreatePost() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-text-primary">Content</h2>
-                <p className="text-sm text-text-tertiary">Fill in the relevant sections for your post type</p>
+                <p className="text-sm text-text-tertiary">Update the relevant sections for your post type</p>
               </div>
 
               {/* Context - Required */}
