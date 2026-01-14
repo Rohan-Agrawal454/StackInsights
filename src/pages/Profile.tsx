@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, MapPin, Building, Sun, Moon, Edit } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
@@ -6,30 +7,46 @@ import { Separator } from '@/components/ui/separator';
 import { PostCard } from '@/components/posts/PostCard';
 import { Toggle } from '@/components/ui/toggle';
 import { useTheme } from '@/hooks/use-theme';
-import { authors, posts } from '@/lib/data';
+import { authors, type Post } from '@/lib/data';
+import { getPostsByAuthor, fetchProfilePage } from '@/lib/contentstack-api';
+import type { ProfilePageContent } from '@/types/contentstack';
 
 export default function Profile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const author = authors.find(a => a.id === id);
+  const [authorPosts, setAuthorPosts] = useState<Post[]>([]);
+  const [pageContent, setPageContent] = useState<ProfilePageContent | null>(null);
   
   const isDark = theme === 'dark';
+
+  useEffect(() => {
+    fetchProfilePage().then(setPageContent);
+  }, []);
+
+  useEffect(() => {
+    if (id) {
+      getPostsByAuthor(parseInt(id)).then(setAuthorPosts);
+    }
+  }, [id]);
+
+  if (!pageContent) {
+    return null;
+  }
   
   if (!author) {
     return (
       <Layout>
         <div className="container py-16 text-center">
-          <h1 className="text-2xl font-semibold text-text-primary">Author not found</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">{pageContent.not_found.title}</h1>
           <Button asChild className="mt-4">
-            <Link to="/browse">Back to Browse</Link>
+            <Link to="/browse">{pageContent.not_found.button_text}</Link>
           </Button>
         </div>
       </Layout>
     );
   }
-
-  const authorPosts = posts.filter(p => p.author.id === author.id);
 
   return (
     <Layout>
@@ -38,7 +55,7 @@ export default function Profile() {
         <Button variant="ghost" asChild className="mb-6 -ml-2">
           <Link to="/browse">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Browse
+            {pageContent.navigation.back_button_text}
           </Link>
         </Button>
 
@@ -60,7 +77,7 @@ export default function Profile() {
                 <Toggle
                   pressed={isDark}
                   onPressedChange={() => setTheme(isDark ? 'light' : 'dark')}
-                  aria-label="Toggle dark mode"
+                  aria-label={pageContent.profile_header.theme_toggle_label}
                   className="h-10 w-10 rounded-full border border-border bg-card data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
                 >
                   {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
@@ -92,14 +109,14 @@ export default function Profile() {
           <div className="mt-6 flex items-center gap-6">
             <div className="text-center">
               <p className="text-2xl font-semibold text-text-primary">{authorPosts.length}</p>
-              <p className="text-sm text-text-tertiary">Posts</p>
+              <p className="text-sm text-text-tertiary">{pageContent.stats_section.posts_label}</p>
             </div>
             <Separator orientation="vertical" className="h-10" />
             <div className="text-center">
               <p className="text-2xl font-semibold text-text-primary">
                 {authorPosts.reduce((acc, p) => acc + p.readTime, 0)}
               </p>
-              <p className="text-sm text-text-tertiary">Min of content</p>
+              <p className="text-sm text-text-tertiary">{pageContent.stats_section.content_minutes_label}</p>
             </div>
           </div>
         </div>
@@ -109,7 +126,7 @@ export default function Profile() {
         {/* Posts */}
         <div>
           <h2 className="mb-6 text-xl font-semibold text-text-primary">
-            Posts by {author.name.split(' ')[0]}
+            {pageContent.posts_section.section_title_prefix} {author.name.split(' ')[0]}
           </h2>
           
           {authorPosts.length > 0 ? (
@@ -128,14 +145,14 @@ export default function Profile() {
                     className="absolute top-3 right-3 z-10 h-7 gap-1.5 bg-card/95 backdrop-blur-sm shadow-sm hover:bg-card border border-border"
                   >
                     <Edit className="h-3.5 w-3.5" />
-                    <span className="text-xs">Edit</span>
+                    <span className="text-xs">{pageContent.posts_section.edit_button_text}</span>
                   </Button>
                 </div>
               ))}
             </div>
           ) : (
             <div className="rounded-lg border border-border bg-muted/30 p-8 text-center">
-              <p className="text-text-secondary">No posts yet.</p>
+              <p className="text-text-secondary">{pageContent.posts_section.empty_state_message}</p>
             </div>
           )}
         </div>

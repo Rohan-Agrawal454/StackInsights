@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen } from 'lucide-react';
+import { ArrowLeft, Save, Send, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,33 +15,87 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { teams, categories, getCategoryLabel, getCategoryColor, allTags, posts, type PostCategory } from '@/lib/data';
+import { getCategoryColor, type PostCategory, type Post } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { getPostByUid, fetchEditPostContent, fetchCategories, getAllPosts } from '@/lib/contentstack-api';
+import type { EditPostContent, ContentstackCategory } from '@/types/contentstack';
 
 export default function EditPost() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const post = posts.find((p) => p.id === id);
+  const [pageContent, setPageContent] = useState<EditPostContent | null>(null);
+  const [categories, setCategories] = useState<ContentstackCategory[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [post, setPost] = useState<Post | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [title, setTitle] = useState(() => post?.title || '');
-  const [category, setCategory] = useState<string>(() => post?.category || '');
-  const [team, setTeam] = useState(() => post?.team || '');
-  const [selectedTags, setSelectedTags] = useState<string[]>(() => post?.tags || []);
-  const [context, setContext] = useState(() => post?.content.context || '');
-  const [problem, setProblem] = useState(() => post?.content.problem || '');
-  const [resolution, setResolution] = useState(() => post?.content.resolution || '');
-  const [achievements, setAchievements] = useState(() => post?.content.achievements || '');
-  const [challenges, setChallenges] = useState(() => post?.content.challenges || '');
-  const [improvements, setImprovements] = useState(() => post?.content.improvements || '');
-  const [learnings, setLearnings] = useState(() => post?.content.learnings || '');
+  const [title, setTitle] = useState('');
+  const [excerpt, setExcerpt] = useState('');
+  const [category, setCategory] = useState<string>('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState('');
+  const [context, setContext] = useState('');
+  const [problem, setProblem] = useState('');
+  const [resolution, setResolution] = useState('');
+  const [achievements, setAchievements] = useState('');
+  const [challenges, setChallenges] = useState('');
+  const [improvements, setImprovements] = useState('');
+  const [learnings, setLearnings] = useState('');
+
+  useEffect(() => {
+    fetchEditPostContent().then(setPageContent);
+    fetchCategories().then(setCategories);
+    getAllPosts().then(setPosts);
+  }, []);
+
+  useEffect(() => {
+    const fetchPost = async () => {
+      if (!id) return;
+      const fetchedPost = await getPostByUid(id);
+      if (fetchedPost) {
+        setPost(fetchedPost);
+        setTitle(fetchedPost.title);
+        setExcerpt(fetchedPost.excerpt);
+        setCategory(fetchedPost.category);
+        setSelectedTags(fetchedPost.tags);
+        setContext(fetchedPost.content.context || '');
+        setProblem(fetchedPost.content.problem || '');
+        setResolution(fetchedPost.content.resolution || '');
+        setAchievements(fetchedPost.content.achievements || '');
+        setChallenges(fetchedPost.content.challenges || '');
+        setImprovements(fetchedPost.content.improvements || '');
+        setLearnings(fetchedPost.content.learnings || '');
+      }
+      setLoading(false);
+    };
+    fetchPost();
+  }, [id]);
+
+  // Generate all unique tags from posts
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    posts.forEach(p => {
+      p.tags.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags);
+  }, [posts]);
+
+  if (loading || !pageContent) {
+    return null;
+  }
 
   if (!post) {
     return (
       <Layout>
         <div className="container py-16 text-center">
-          <h1 className="text-2xl font-semibold text-text-primary">Post not found</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">
+            {pageContent.toast_messages?.not_found_title || "Post not found"}
+          </h1>
+          <p className="mt-2 text-text-secondary">
+            {pageContent.toast_messages?.not_found_description || "The post you're trying to edit doesn't exist."}
+          </p>
           <Button asChild className="mt-4">
             <Link to="/browse">Back to Browse</Link>
           </Button>
@@ -56,25 +110,40 @@ export default function EditPost() {
     );
   };
 
+  const handleCustomTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && customTagInput.trim()) {
+      e.preventDefault();
+      const newTag = customTagInput.trim();
+      if (!selectedTags.includes(newTag)) {
+        setSelectedTags(prev => [...prev, newTag]);
+      }
+      setCustomTagInput('');
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setSelectedTags(prev => prev.filter(t => t !== tag));
+  };
+
   const handleSaveDraft = () => {
     toast({
-      title: "Draft saved",
-      description: "Your changes have been saved as a draft.",
+      title: pageContent.toast_messages?.draft_saved_title || "Draft saved",
+      description: pageContent.toast_messages?.draft_saved_description || "Your changes have been saved as a draft.",
     });
   };
 
   const handleUpdate = () => {
-    if (!title || !category || !team || !context) {
+    if (!title || !excerpt || !category || !context) {
       toast({
-        title: "Missing fields",
-        description: "Please fill in title, category, team, and context before updating.",
+        title: pageContent.toast_messages?.missing_fields_title || "Missing fields",
+        description: pageContent.toast_messages?.missing_fields_description || "Please fill in title, excerpt, category, and context before updating.",
         variant: "destructive",
       });
       return;
     }
     toast({
-      title: "Post updated!",
-      description: "Your post has been successfully updated.",
+      title: pageContent.toast_messages?.updated_title || "Post updated!",
+      description: pageContent.toast_messages?.updated_description || "Your changes have been published.",
     });
     navigate(`/post/${post.id}`);
   };
@@ -95,16 +164,16 @@ export default function EditPost() {
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
-              <h1 className="text-2xl font-bold text-text-primary">Edit Post</h1>
+              <h1 className="text-2xl font-bold text-text-primary">{pageContent.page_header.page_title}</h1>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleSaveDraft}>
                 <Save className="mr-2 h-4 w-4" />
-                Save Draft
+                {pageContent.action_buttons.save_draft_button}
               </Button>
               <Button onClick={handleUpdate}>
                 <Send className="mr-2 h-4 w-4" />
-                Update Post
+                {pageContent.action_buttons.publish_button} 
               </Button>
             </div>
           </div>
@@ -114,57 +183,55 @@ export default function EditPost() {
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title" className="text-sm font-medium">
-                Title <span className="text-destructive">*</span>
+                {pageContent.form_labels.title_label} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="title"
-                placeholder="Enter a descriptive title..."
+                placeholder={pageContent.form_labels.title_placeholder}
                 value={title}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
                 className="h-12 text-lg font-medium bg-card"
               />
             </div>
 
-            {/* Type and Team */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Post Type <span className="text-destructive">*</span>
-                </Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="bg-card">
-                    <SelectValue placeholder="Select type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat: PostCategory) => (
-                      <SelectItem key={cat} value={cat}>
-                        {getCategoryLabel(cat as PostCategory)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Team <span className="text-destructive">*</span>
-                </Label>
-                <Select value={team} onValueChange={setTeam}>
-                  <SelectTrigger className="bg-card">
-                    <SelectValue placeholder="Select team..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.filter((t: string) => t !== 'All Teams').map((t: string) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Excerpt */}
+            <div className="space-y-2">
+              <Label htmlFor="excerpt" className="text-sm font-medium">
+                {pageContent.form_labels.excerpt_label} <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="excerpt"
+                placeholder={pageContent.form_labels.excerpt_placeholder}
+                value={excerpt}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setExcerpt(e.target.value)}
+                className="min-h-[80px] bg-card"
+              />
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.excerpt_help_text}</p>
+            </div>
+
+            {/* Post Type */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                {pageContent.form_labels.post_type_label} <span className="text-destructive">*</span>
+              </Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="bg-card">
+                  <SelectValue placeholder={pageContent.form_labels.post_type_placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.uid} value={cat.category_value}>
+                      {cat.category_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.team_label}: {post.team} {pageContent.form_labels.team_help_text && `(${pageContent.form_labels.team_help_text.toLowerCase()})`}</p>
             </div>
 
             {/* Tags */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Tags</Label>
+              <Label className="text-sm font-medium">{pageContent.form_labels.tags_label}</Label>
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag: string) => (
                   <Badge
@@ -177,7 +244,38 @@ export default function EditPost() {
                   </Badge>
                 ))}
               </div>
-              <p className="text-xs text-text-tertiary">Click to add or remove tags</p>
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.tags_help_text}</p>
+            </div>
+
+            {/* Custom Tags Input */}
+            <div className="space-y-2">
+              <Label htmlFor="customTags" className="text-sm font-medium">
+                {pageContent.form_labels.custom_tags_label}
+              </Label>
+              <Input
+                id="customTags"
+                placeholder={pageContent.form_labels.custom_tags_placeholder}
+                value={customTagInput}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomTagInput(e.target.value)}
+                onKeyDown={handleCustomTagKeyDown}
+                className="bg-card"
+              />
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.custom_tags_help_text}</p>
+              
+              {/* Display selected custom tags */}
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {selectedTags.map((tag: string) => (
+                    <Badge key={tag} variant="default" className="gap-1">
+                      {tag}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => removeTag(tag)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -185,8 +283,8 @@ export default function EditPost() {
             {/* Content Sections */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-text-primary">Content</h2>
-                <p className="text-sm text-text-tertiary">Update the relevant sections for your post type</p>
+                <h2 className="text-xl font-semibold text-text-primary">{pageContent.content_section.section_title}</h2>
+                <p className="text-sm text-text-tertiary">{pageContent.content_section.section_subtitle}</p>
               </div>
 
               {/* Context - Required */}
@@ -197,13 +295,13 @@ export default function EditPost() {
                   </div>
                   <div>
                     <Label className="text-lg font-semibold text-text-primary">
-                      Context <span className="text-destructive">*</span>
+                      {pageContent.context_section.label} <span className="text-destructive">*</span>
                     </Label>
-                    <p className="text-xs text-text-tertiary">Provide background and context for this post</p>
+                    <p className="text-xs text-text-tertiary">{pageContent.context_section.description}</p>
                   </div>
                 </div>
                 <Textarea
-                  placeholder="Describe the background and context for this post. What situation or system are you discussing?"
+                  placeholder={pageContent.context_section.placeholder}
                   value={context}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContext(e.target.value)}
                   className="min-h-[120px] bg-background"

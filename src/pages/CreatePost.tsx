@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Save, Send, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen } from 'lucide-react';
+import { ArrowLeft, Save, Send, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,16 +15,23 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { teams, categories, getCategoryLabel, getCategoryColor, allTags, type PostCategory } from '@/lib/data';
+import { getCategoryColor, type Post, type PostCategory } from '@/lib/data';
+import { fetchCreatePostContent, fetchCategories, getAllPosts } from '@/lib/contentstack-api';
+import type { CreatePostContent, ContentstackCategory } from '@/types/contentstack';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function CreatePost() {
   const { toast } = useToast();
+  const [pageContent, setPageContent] = useState<CreatePostContent | null>(null);
+  const [categories, setCategories] = useState<ContentstackCategory[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  
   const [title, setTitle] = useState('');
+  const [excerpt, setExcerpt] = useState('');
   const [category, setCategory] = useState<string>('');
-  const [team, setTeam] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState('');
   const [context, setContext] = useState('');
   const [problem, setProblem] = useState('');
   const [resolution, setResolution] = useState('');
@@ -33,33 +40,69 @@ export default function CreatePost() {
   const [improvements, setImprovements] = useState('');
   const [learnings, setLearnings] = useState('');
 
+  useEffect(() => {
+    fetchCreatePostContent().then(setPageContent);
+    fetchCategories().then(setCategories);
+    getAllPosts().then(setPosts);
+  }, []);
+
+  // Generate all unique tags from posts
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    posts.forEach(post => {
+      post.tags.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags);
+  }, [posts]);
+
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
   };
 
+  const handleCustomTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && customTagInput.trim()) {
+      e.preventDefault();
+      const newTag = customTagInput.trim();
+      if (!selectedTags.includes(newTag)) {
+        setSelectedTags(prev => [...prev, newTag]);
+      }
+      setCustomTagInput('');
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setSelectedTags(prev => prev.filter(t => t !== tag));
+  };
+
   const handleSaveDraft = () => {
+    if (!pageContent) return;
     toast({
-      title: "Draft saved",
-      description: "Your post has been saved as a draft.",
+      title: pageContent.toast_messages?.draft_saved_title || "Draft saved",
+      description: pageContent.toast_messages?.draft_saved_description || "Your post has been saved as a draft.",
     });
   };
 
   const handlePublish = () => {
-    if (!title || !category || !team || !context) {
+    if (!pageContent) return;
+    if (!title || !excerpt || !category || !context) {
       toast({
-        title: "Missing fields",
-        description: "Please fill in title, category, team, and context before publishing.",
+        title: pageContent.toast_messages?.missing_fields_title || "Missing fields",
+        description: pageContent.toast_messages?.missing_fields_description || "Please fill in title, excerpt, category, and context before publishing.",
         variant: "destructive",
       });
       return;
     }
     toast({
-      title: "Post published!",
-      description: "Your post is now live and visible to the team.",
+      title: pageContent.toast_messages?.published_title || "Post published!",
+      description: pageContent.toast_messages?.published_description || "Your post is now live and visible to the team.",
     });
   };
+
+  if (!pageContent) {
+    return null;
+  }
 
   const isInsight = category === 'insight';
   const isIncident = category === 'incident';
@@ -77,16 +120,16 @@ export default function CreatePost() {
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
-              <h1 className="text-2xl font-bold text-text-primary">Create Post</h1>
+              <h1 className="text-2xl font-bold text-text-primary">{pageContent.page_header.page_title}</h1>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={handleSaveDraft}>
                 <Save className="mr-2 h-4 w-4" />
-                Save Draft
+                {pageContent.action_buttons.save_draft_button}
               </Button>
               <Button onClick={handlePublish}>
                 <Send className="mr-2 h-4 w-4" />
-                Publish
+                {pageContent.action_buttons.publish_button}
               </Button>
             </div>
           </div>
@@ -96,57 +139,55 @@ export default function CreatePost() {
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title" className="text-sm font-medium">
-                Title <span className="text-destructive">*</span>
+                {pageContent.form_labels.title_label} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="title"
-                placeholder="Enter a descriptive title..."
+                placeholder={pageContent.form_labels.title_placeholder}
                 value={title}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
                 className="h-12 text-lg font-medium bg-card"
               />
             </div>
 
-            {/* Type and Team */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Post Type <span className="text-destructive">*</span>
-                </Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="bg-card">
-                    <SelectValue placeholder="Select type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat: PostCategory) => (
-                      <SelectItem key={cat} value={cat}>
-                        {getCategoryLabel(cat as PostCategory)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Team <span className="text-destructive">*</span>
-                </Label>
-                <Select value={team} onValueChange={setTeam}>
-                  <SelectTrigger className="bg-card">
-                    <SelectValue placeholder="Select team..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.filter((t: string) => t !== 'All Teams').map((t: string) => (
-                      <SelectItem key={t} value={t}>{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Excerpt */}
+            <div className="space-y-2">
+              <Label htmlFor="excerpt" className="text-sm font-medium">
+                {pageContent.form_labels.excerpt_label} <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="excerpt"
+                placeholder={pageContent.form_labels.excerpt_placeholder}
+                value={excerpt}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setExcerpt(e.target.value)}
+                className="min-h-[80px] bg-card"
+              />
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.excerpt_help_text}</p>
+            </div>
+
+            {/* Post Type */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                {pageContent.form_labels.post_type_label} <span className="text-destructive">*</span>
+              </Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="bg-card">
+                  <SelectValue placeholder={pageContent.form_labels.post_type_placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.uid} value={cat.category_value}>
+                      {cat.category_label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.post_type_help_text}</p>
             </div>
 
             {/* Tags */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Tags</Label>
+              <Label className="text-sm font-medium">{pageContent.form_labels.tags_label}</Label>
               <div className="flex flex-wrap gap-2">
                 {allTags.map((tag: string) => (
                   <Badge
@@ -159,7 +200,38 @@ export default function CreatePost() {
                   </Badge>
                 ))}
               </div>
-              <p className="text-xs text-text-tertiary">Click to add or remove tags</p>
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.tags_help_text}</p>
+            </div>
+
+            {/* Custom Tags Input */}
+            <div className="space-y-2">
+              <Label htmlFor="customTags" className="text-sm font-medium">
+                {pageContent.form_labels.custom_tags_label}
+              </Label>
+              <Input
+                id="customTags"
+                placeholder={pageContent.form_labels.custom_tags_placeholder}
+                value={customTagInput}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomTagInput(e.target.value)}
+                onKeyDown={handleCustomTagKeyDown}
+                className="bg-card"
+              />
+              <p className="text-xs text-text-tertiary">{pageContent.form_labels.custom_tags_help_text}</p>
+              
+              {/* Display selected custom tags */}
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {selectedTags.map((tag: string) => (
+                    <Badge key={tag} variant="default" className="gap-1">
+                      {tag}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => removeTag(tag)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -167,8 +239,8 @@ export default function CreatePost() {
             {/* Content Sections */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-text-primary">Content</h2>
-                <p className="text-sm text-text-tertiary">Fill in the relevant sections for your post type</p>
+                <h2 className="text-xl font-semibold text-text-primary">{pageContent.content_section.section_title}</h2>
+                <p className="text-sm text-text-tertiary">{pageContent.content_section.section_subtitle}</p>
               </div>
 
               {/* Context - Required */}
@@ -179,13 +251,13 @@ export default function CreatePost() {
                   </div>
                   <div>
                     <Label className="text-lg font-semibold text-text-primary">
-                      Context <span className="text-destructive">*</span>
+                      {pageContent.context_section.label} <span className="text-destructive">*</span>
                     </Label>
-                    <p className="text-xs text-text-tertiary">Provide background and context for this post</p>
+                    <p className="text-xs text-text-tertiary">{pageContent.context_section.description}</p>
                   </div>
                 </div>
                 <Textarea
-                  placeholder="Describe the background and context for this post. What situation or system are you discussing?"
+                  placeholder={pageContent.context_section.placeholder}
                   value={context}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContext(e.target.value)}
                   className="min-h-[120px] bg-background"
@@ -200,12 +272,12 @@ export default function CreatePost() {
                       <AlertCircle className="h-5 w-5 text-incident" />
                     </div>
                     <div>
-                      <Label className="text-lg font-semibold text-text-primary">Problem Statement</Label>
-                      <p className="text-xs text-text-tertiary">Describe the challenge or issue you faced</p>
+                      <Label className="text-lg font-semibold text-text-primary">{pageContent.problem_section.label}</Label>
+                      <p className="text-xs text-text-tertiary">{pageContent.problem_section.description}</p>
                     </div>
                   </div>
                   <Textarea
-                    placeholder="What was the core challenge or problem? What symptoms did you observe?"
+                    placeholder={pageContent.problem_section.placeholder}
                     value={problem}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setProblem(e.target.value)}
                     className="min-h-[120px] bg-background"
@@ -221,12 +293,12 @@ export default function CreatePost() {
                       <CheckCircle className="h-5 w-5 text-retro" />
                     </div>
                     <div>
-                      <Label className="text-lg font-semibold text-text-primary">Resolution</Label>
-                      <p className="text-xs text-text-tertiary">How did you solve or address the problem?</p>
+                      <Label className="text-lg font-semibold text-text-primary">{pageContent.resolution_section.label}</Label>
+                      <p className="text-xs text-text-tertiary">{pageContent.resolution_section.description}</p>
                     </div>
                   </div>
                   <Textarea
-                    placeholder="Describe the solution you implemented. What steps did you take?"
+                    placeholder={pageContent.resolution_section.placeholder}
                     value={resolution}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setResolution(e.target.value)}
                     className="min-h-[120px] bg-background"
@@ -242,12 +314,12 @@ export default function CreatePost() {
                       <Target className="h-5 w-5 text-insight" />
                     </div>
                     <div>
-                      <Label className="text-lg font-semibold text-text-primary">Achievements</Label>
-                      <p className="text-xs text-text-tertiary">What were the major wins this period?</p>
+                      <Label className="text-lg font-semibold text-text-primary">{pageContent.achievements_section.label}</Label>
+                      <p className="text-xs text-text-tertiary">{pageContent.achievements_section.description}</p>
                     </div>
                   </div>
                   <Textarea
-                    placeholder="List the key achievements, milestones, or successes..."
+                    placeholder={pageContent.achievements_section.placeholder}
                     value={achievements}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setAchievements(e.target.value)}
                     className="min-h-[120px] bg-background"
@@ -263,12 +335,12 @@ export default function CreatePost() {
                       <TrendingUp className="h-5 w-5 text-text-secondary" />
                     </div>
                     <div>
-                      <Label className="text-lg font-semibold text-text-primary">Challenges</Label>
-                      <p className="text-xs text-text-tertiary">What obstacles or difficulties did you encounter?</p>
+                      <Label className="text-lg font-semibold text-text-primary">{pageContent.challenges_section.label}</Label>
+                      <p className="text-xs text-text-tertiary">{pageContent.challenges_section.description}</p>
                     </div>
                   </div>
                   <Textarea
-                    placeholder="Describe the challenges, obstacles, or areas where you struggled..."
+                    placeholder={pageContent.challenges_section.placeholder}
                     value={challenges}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setChallenges(e.target.value)}
                     className="min-h-[120px] bg-background"
@@ -284,12 +356,12 @@ export default function CreatePost() {
                       <BookOpen className="h-5 w-5 text-accent" />
                     </div>
                     <div>
-                      <Label className="text-lg font-semibold text-text-primary">Improvements</Label>
-                      <p className="text-xs text-text-tertiary">What actions will you take going forward?</p>
+                      <Label className="text-lg font-semibold text-text-primary">{pageContent.improvements_section.label}</Label>
+                      <p className="text-xs text-text-tertiary">{pageContent.improvements_section.description}</p>
                     </div>
                   </div>
                   <Textarea
-                    placeholder="What improvements, changes, or actions will you implement next period?"
+                    placeholder={pageContent.improvements_section.placeholder}
                     value={improvements}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setImprovements(e.target.value)}
                     className="min-h-[120px] bg-background"
@@ -304,12 +376,12 @@ export default function CreatePost() {
                     <Lightbulb className="h-5 w-5 text-accent" />
                   </div>
                   <div>
-                    <Label className="text-lg font-semibold text-text-primary">Key Learnings</Label>
-                    <p className="text-xs text-text-tertiary">What insights or lessons did you gain?</p>
+                    <Label className="text-lg font-semibold text-text-primary">{pageContent.learnings_section.label}</Label>
+                    <p className="text-xs text-text-tertiary">{pageContent.learnings_section.description}</p>
                   </div>
                 </div>
                 <Textarea
-                  placeholder="Share the key takeaways, insights, or lessons learned from this experience..."
+                  placeholder={pageContent.learnings_section.placeholder}
                   value={learnings}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setLearnings(e.target.value)}
                   className="min-h-[120px] bg-background"
@@ -319,13 +391,11 @@ export default function CreatePost() {
 
             {/* Tips */}
             <div className="rounded-lg border border-border bg-muted/30 p-4">
-              <h3 className="font-medium text-text-primary text-sm mb-2">Writing Tips</h3>
+              <h3 className="font-medium text-text-primary text-sm mb-2">{pageContent.writing_tips.tips_title}</h3>
               <ul className="text-sm text-text-secondary space-y-1">
-                <li>• Context is required - provide clear background information</li>
-                <li>• For Insights/Incidents: Focus on problem, resolution, and learnings</li>
-                <li>• For Retrospectives: Highlight achievements, challenges, and improvements</li>
-                <li>• Be specific with technical details and include concrete examples</li>
-                <li>• Key Learnings should be actionable takeaways for the team</li>
+                {pageContent.writing_tips.tips_list.split('\n').map((tip, index) => (
+                  <li key={index}>{tip}</li>
+                ))}
               </ul>
             </div>
           </div>

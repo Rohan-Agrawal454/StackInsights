@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Clock, Calendar, Tag, ChevronRight, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
@@ -5,13 +6,34 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { PostCard } from '@/components/posts/PostCard';
-import { posts, getCategoryLabel, getCategoryColor, type Post } from '@/lib/data';
+import { getCategoryLabel, getCategoryColor, type Post } from '@/lib/data';
+import { getPostByUid, getAllPosts } from '@/lib/contentstack-api';
 import { cn } from '@/lib/utils';
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
-  const post = posts.find((p: Post) => p.id === id);
+  const [post, setPost] = useState<Post | null>(null);
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!id) return;
+      const [fetchedPost, posts] = await Promise.all([
+        getPostByUid(id),
+        getAllPosts()
+      ]);
+      setPost(fetchedPost);
+      setAllPosts(posts);
+      setLoading(false);
+    };
+    fetchData();
+  }, [id]);
   
+  if (loading) {
+    return null;
+  }
+
   if (!post) {
     return (
       <Layout>
@@ -25,7 +47,7 @@ export default function PostDetail() {
     );
   }
 
-  const relatedPosts = posts
+  const relatedPosts = allPosts
     .filter((p: Post) => p.id !== post.id && (p.category === post.category || p.team === post.team))
     .slice(0, 3);
 

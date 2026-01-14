@@ -1,10 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Filter, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { SearchInput } from '@/components/ui/search-input';
 import { PostCard } from '@/components/posts/PostCard';
-// import { CategoryCard } from '@/components/posts/CategoryCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -14,19 +13,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { posts, teams, categories, allTags, getCategoryLabel, type PostCategory, type Post } from '@/lib/data';
+import { type Post } from '@/lib/data';
+import { getAllPosts, fetchBrowsePage, fetchTeams, fetchCategories } from '@/lib/contentstack-api';
+import type { BrowsePageContent, ContentstackTeam, ContentstackCategory } from '@/types/contentstack';
 
 export default function Browse() {
-//   const categoryCounts = categories.reduce((acc: Record<string, number>, cat: PostCategory) => {
-//     acc[cat] = posts.filter((p: Post) => p.category === cat).length;
-//     return acc;
-//   }, {} as Record<string, number>);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [browseData, setBrowseData] = useState<BrowsePageContent | null>(null);
+  const [teams, setTeams] = useState<ContentstackTeam[]>([]);
+  const [categories, setCategories] = useState<ContentstackCategory[]>([]);
   
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [selectedTeam, setSelectedTeam] = useState(searchParams.get('team') || 'All Teams');
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    getAllPosts().then(setPosts);
+    fetchBrowsePage().then(setBrowseData);
+    fetchTeams().then(setTeams);
+    fetchCategories().then(setCategories);
+  }, []);
+
+  // Generate all unique tags from posts
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    posts.forEach(post => {
+      post.tags.forEach(tag => tags.add(tag));
+    });
+    return Array.from(tags);
+  }, [posts]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter((post: Post) => {
@@ -42,7 +59,7 @@ export default function Browse() {
       
       return matchesSearch && matchesTeam && matchesCategory && matchesTags;
     });
-  }, [search, selectedTeam, selectedCategory, selectedTags]);
+  }, [posts, search, selectedTeam, selectedCategory, selectedTags]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
@@ -61,14 +78,31 @@ export default function Browse() {
   const hasActiveFilters = search || selectedTeam !== 'All Teams' || 
     selectedCategory !== 'all' || selectedTags.length > 0;
 
+  if (!browseData) {
+    return null;
+  }
+
+  // Extract content from CMS
+  const pageTitle = browseData.header.page_title;
+  const pageSubtitle = browseData.header.page_subtitle;
+  const searchPlaceholder = browseData.search_section.search_placeholder;
+  const teamFilterLabel = browseData.search_section.team_filter_label;
+  const categoryFilterLabel = browseData.search_section.category_filter_label;
+  const allCategoriesText = browseData.search_section.all_categories_text;
+  const resultTextSingular = browseData.results_section.result_text_singular;
+  const resultTextPlural = browseData.results_section.result_text_plural;
+  const clearFiltersButton = browseData.results_section.clear_filters_button;
+  const emptyMessage = browseData.empty_state.empty_message;
+  const emptyButtonText = browseData.empty_state.empty_button_text;
+
   return (
     <Layout>
       <div className="container py-8 md:py-12">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-text-primary">Browse Posts</h1>
+          <h1 className="text-3xl font-bold text-text-primary">{pageTitle}</h1>
           <p className="mt-2 text-text-secondary">
-            Explore insights, incidents, and retrospectives from across the organization.
+            {pageSubtitle}
           </p>
         </div>
 
@@ -89,29 +123,29 @@ export default function Browse() {
             <SearchInput
               value={search}
               onChange={setSearch}
-              placeholder="Search posts..."
+              placeholder={searchPlaceholder}
               className="flex-1"
             />
             <div className="flex gap-2">
               <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                 <SelectTrigger className="w-40 bg-card">
-                  <SelectValue placeholder="Team" />
+                  <SelectValue placeholder={teamFilterLabel} />
                 </SelectTrigger>
                 <SelectContent>
-                  {teams.map((team: string) => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.uid} value={team.team_name}>{team.team_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                 <SelectTrigger className="w-44 bg-card">
-                  <SelectValue placeholder="Category" />
+                  <SelectValue placeholder={categoryFilterLabel} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  {categories.map((cat: PostCategory) => (
-                    <SelectItem key={cat} value={cat}>{getCategoryLabel(cat as PostCategory)}</SelectItem>
+                  <SelectItem value="all">{allCategoriesText}</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.uid} value={cat.category_value}>{cat.category_label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -121,7 +155,7 @@ export default function Browse() {
           {/* Tags */}
           <div className="flex flex-wrap items-center gap-2">
             <Filter className="h-4 w-4 text-text-tertiary" />
-            {allTags.slice(0, 12).map((tag: string) => (
+            {allTags.map((tag: string) => (
               <Badge
                 key={tag}
                 variant={selectedTags.includes(tag) ? 'default' : 'outline'}
@@ -137,11 +171,11 @@ export default function Browse() {
           {hasActiveFilters && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-text-tertiary">
-                {filteredPosts.length} {filteredPosts.length === 1 ? 'result' : 'results'}
+                {filteredPosts.length} {filteredPosts.length === 1 ? resultTextSingular : resultTextPlural}
               </span>
               <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs">
                 <X className="mr-1 h-3 w-3" />
-                Clear filters
+                {clearFiltersButton}
               </Button>
             </div>
           )}
@@ -156,9 +190,9 @@ export default function Browse() {
           </div>
         ) : (
           <div className="py-16 text-center">
-            <p className="text-lg text-text-secondary">No posts found matching your filters.</p>
+            <p className="text-lg text-text-secondary">{emptyMessage}</p>
             <Button variant="outline" onClick={clearFilters} className="mt-4">
-              Clear filters
+              {emptyButtonText}
             </Button>
           </div>
         )}

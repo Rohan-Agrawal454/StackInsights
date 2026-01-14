@@ -1,10 +1,55 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Lightbulb, AlertTriangle, RotateCcw, CheckCircle, XCircle, BookOpen } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { fetchAboutPage } from '@/lib/contentstack-api';
+import type { AboutPageContent } from '@/types/contentstack';
 
 export default function About() {
+  const [aboutData, setAboutData] = useState<AboutPageContent | null>(null);
+
+  useEffect(() => {
+    fetchAboutPage().then(setAboutData);
+  }, []);
+
+  if (!aboutData) {
+    return null;
+  }
+
+  // Extract all content from CMS
+  const headerTitle = aboutData.header.title;
+  const headerSubtitle = aboutData.header.subtitle;
+  
+  const purposeTitle = aboutData.purpose.title;
+  const purposeParagraph1 = aboutData.purpose.paragraph_1;
+  const purposeParagraph2 = aboutData.purpose.paragraph_2;
+  
+  const contentTypesHeading = aboutData.contenttype_section.heading;
+  const insightTitle = aboutData.contenttype_section.insight_card.title;
+  const insightDescription = aboutData.contenttype_section.insight_card.description;
+  const incidentTitle = aboutData.contenttype_section.incident_card.title;
+  const incidentDescription = aboutData.contenttype_section.incident_card.description;
+  const retroTitle = aboutData.contenttype_section.retrospective_card.title;
+  const retroDescription = aboutData.contenttype_section.retrospective_card.description;
+  
+  const guidelinesHeading = aboutData.guidelines_section.heading;
+  const guidelinesIntro = aboutData.guidelines_section.intro_text;
+  const doTitle = aboutData.guidelines_section.do_items.title;
+  const doItems = aboutData.guidelines_section.do_items.items;
+  const dontTitle = aboutData.guidelines_section.dont_item.title;
+  const dontItems = aboutData.guidelines_section.dont_item.items;
+  
+  const structureHeading = aboutData.structure_section.heading;
+  const structureIntro = aboutData.structure_section.intro_text;
+  const structureItems = aboutData.structure_section.items;
+  
+  const ctaTitle = aboutData.cta.title;
+  const ctaDescription = aboutData.cta.description;
+  const ctaButtonText = aboutData.cta.button_text;
+  const ctaButtonLink = aboutData.cta.button_link.href;
+
   return (
     <Layout>
       <div className="container py-12 md:py-16">
@@ -14,25 +59,21 @@ export default function About() {
             <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
               <BookOpen className="h-8 w-8 text-primary-foreground" />
             </div>
-            <h1 className="text-4xl font-bold text-text-primary">About StackInsights</h1>
+            <h1 className="text-4xl font-bold text-text-primary">{headerTitle}</h1>
             <p className="mt-4 text-lg text-text-secondary">
-              Building a culture of continuous learning through shared knowledge.
+              {headerSubtitle}
             </p>
           </header>
 
           <div className="prose-stack">
             {/* Purpose */}
             <section>
-              <h2>Purpose</h2>
+              <h2>{purposeTitle}</h2>
               <p>
-                StackInsights is our internal knowledge-sharing platform designed to help teams 
-                discover, read, and publish technical learnings. By documenting our experiences—both 
-                successes and failures—we build organizational memory and accelerate collective growth.
+                {purposeParagraph1}
               </p>
               <p>
-                Every insight shared, incident documented, and retrospective written adds to our 
-                shared understanding. This platform makes it easy to learn from each other, 
-                regardless of team or location.
+                {purposeParagraph2}
               </p>
             </section>
 
@@ -40,7 +81,7 @@ export default function About() {
 
             {/* Post Types */}
             <section>
-              <h2>Types of Content</h2>
+              <h2>{contentTypesHeading}</h2>
               
               <div className="mt-6 space-y-4">
                 <div className="flex gap-4 rounded-lg border border-insight/20 bg-insight/5 p-4">
@@ -48,11 +89,9 @@ export default function About() {
                     <Lightbulb className="h-5 w-5 text-insight" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text-primary">Insights</h3>
+                    <h3 className="font-semibold text-text-primary">{insightTitle}</h3>
                     <p className="mt-1 text-sm text-text-secondary">
-                      Technical learnings, best practices, architectural decisions, and deep dives 
-                      into specific topics. Share what you've learned to help others avoid pitfalls 
-                      and adopt proven approaches.
+                      {insightDescription}
                     </p>
                   </div>
                 </div>
@@ -62,11 +101,9 @@ export default function About() {
                     <AlertTriangle className="h-5 w-5 text-incident" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text-primary">Incidents</h3>
+                    <h3 className="font-semibold text-text-primary">{incidentTitle}</h3>
                     <p className="mt-1 text-sm text-text-secondary">
-                      Post-mortems and failure analyses. Document what went wrong, how it was 
-                      resolved, and what we learned. Blameless incident reports help us build 
-                      more resilient systems.
+                      {incidentDescription}
                     </p>
                   </div>
                 </div>
@@ -76,11 +113,9 @@ export default function About() {
                     <RotateCcw className="h-5 w-5 text-retro" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-text-primary">Retrospectives</h3>
+                    <h3 className="font-semibold text-text-primary">{retroTitle}</h3>
                     <p className="mt-1 text-sm text-text-secondary">
-                      Team reflections on projects, sprints, or quarters. What went well? 
-                      What could be improved? Share process learnings that help teams work 
-                      more effectively.
+                      {retroDescription}
                     </p>
                   </div>
                 </div>
@@ -91,41 +126,30 @@ export default function About() {
 
             {/* Writing Guidelines */}
             <section>
-              <h2>Writing Guidelines</h2>
+              <h2>{guidelinesHeading}</h2>
               <p>
-                Great posts share common characteristics. Here's how to write content that 
-                helps your colleagues learn and grow:
+                {guidelinesIntro}
               </p>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <div className="space-y-3">
                   <h4 className="flex items-center gap-2 font-semibold text-text-primary">
                     <CheckCircle className="h-4 w-4 text-retro" />
-                    Do
+                    {doTitle}
                   </h4>
-                  <ul className="space-y-2 text-sm text-text-secondary">
-                    <li>• Be specific and include technical details</li>
-                    <li>• Use clear structure with headings</li>
-                    <li>• Include code snippets when relevant</li>
-                    <li>• Focus on actionable takeaways</li>
-                    <li>• Link to related resources</li>
-                    <li>• Keep a blameless tone for incidents</li>
-                  </ul>
+                  <div className="space-y-2 text-sm text-text-secondary whitespace-pre-line">
+                    {doItems}
+                  </div>
                 </div>
                 
                 <div className="space-y-3">
                   <h4 className="flex items-center gap-2 font-semibold text-text-primary">
                     <XCircle className="h-4 w-4 text-incident" />
-                    Don't
+                    {dontTitle}
                   </h4>
-                  <ul className="space-y-2 text-sm text-text-secondary">
-                    <li>• Write vague, high-level overviews</li>
-                    <li>• Include sensitive credentials or PII</li>
-                    <li>• Blame individuals for failures</li>
-                    <li>• Skip the context section</li>
-                    <li>• Forget to tag your post properly</li>
-                    <li>• Use jargon without explanation</li>
-                  </ul>
+                  <div className="space-y-2 text-sm text-text-secondary whitespace-pre-line">
+                    {dontItems}
+                  </div>
                 </div>
               </div>
             </section>
@@ -134,50 +158,27 @@ export default function About() {
 
             {/* Post Structure */}
             <section>
-              <h2>Recommended Structure</h2>
+              <h2>{structureHeading}</h2>
               <p>
-                While not strictly required, we recommend including these sections in your posts:
+                {structureIntro}
               </p>
 
               <div className="mt-4 rounded-lg border border-border bg-muted/30 p-4">
-                <ol className="space-y-3 text-sm">
-                  <li>
-                    <strong className="text-text-primary">1. Context</strong>
-                    <p className="mt-0.5 text-text-secondary">
-                      Background information readers need to understand the situation.
-                    </p>
-                  </li>
-                  <li>
-                    <strong className="text-text-primary">2. Problem / Challenge</strong>
-                    <p className="mt-0.5 text-text-secondary">
-                      What was the issue, goal, or situation being addressed?
-                    </p>
-                  </li>
-                  <li>
-                    <strong className="text-text-primary">3. Solution / Resolution</strong>
-                    <p className="mt-0.5 text-text-secondary">
-                      How was it solved? Include technical details and code examples.
-                    </p>
-                  </li>
-                  <li>
-                    <strong className="text-text-primary">4. Key Learnings</strong>
-                    <p className="mt-0.5 text-text-secondary">
-                      What did you learn? What would you do differently?
-                    </p>
-                  </li>
-                </ol>
+                <div className="text-sm text-text-secondary whitespace-pre-line">
+                  {structureItems}
+                </div>
               </div>
             </section>
           </div>
 
           {/* CTA */}
           <div className="mt-12 rounded-xl border border-border bg-card p-8 text-center">
-            <h3 className="text-xl font-semibold text-text-primary">Ready to contribute?</h3>
+            <h3 className="text-xl font-semibold text-text-primary">{ctaTitle}</h3>
             <p className="mt-2 text-text-secondary">
-              Share your knowledge and help the team grow together.
+              {ctaDescription}
             </p>
             <Button asChild size="lg" className="mt-4">
-              <Link to="/create">Create Your First Post</Link>
+              <Link to={ctaButtonLink}>{ctaButtonText}</Link>
             </Button>
           </div>
         </div>

@@ -1,30 +1,48 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Menu, X, Plus, User, LogOut } from 'lucide-react';
+import { Search, Menu, X, Plus, User, LogOut, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import logoImage from '@/assets/logo.png';
-import profileImage from '@/assets/profile.jpg';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
-
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/browse', label: 'Browse' },
-  { href: '/create', label: 'Create Post' },
-  { href: '/about', label: 'About' },
-];
+import { fetchNavbar } from '@/lib/contentstack-api';
+import type { NavbarContent } from '@/types/contentstack';
+import { useProfile } from '@/contexts/ProfileContext';
 
 export function Navbar() {
   const location = useLocation();
+  const { currentProfile, setCurrentProfile, allProfiles } = useProfile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [navbarData, setNavbarData] = useState<NavbarContent | null>(null);
+
+  useEffect(() => {
+    fetchNavbar().then(setNavbarData);
+  }, []);
+
+  if (!navbarData) {
+    return null; // or loading state
+  }
+
+  const navLinks = navbarData.navigation.map(item => ({
+    href: item.nav_links.href.href,
+    label: item.nav_links.label,
+  }));
+  const logoUrl = navbarData.logo.image.logo_image.url;
+  const logoText = navbarData.logo.brand_text;
+  const logoAlt = navbarData.logo.image.alt_text;
+  const searchPlaceholder = navbarData.search;
+  const createButtonText = navbarData.action_button.button_text;
+  const createButtonLink = navbarData.action_button.button_link.href;
+  const profileLabel = navbarData.user_menu.profile.label;
+  const logoutLabel = navbarData.user_menu.logout.label;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-surface-elevated/95 backdrop-blur supports-[backdrop-filter]:bg-surface-elevated/80">
@@ -32,12 +50,12 @@ export function Navbar() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <img 
-            src={logoImage} 
-            alt="StackInsights" 
+            src={logoUrl} 
+            alt={logoAlt} 
             className="h-10 w-auto"
           />
           <span className="hidden font-semibold text-text-primary sm:inline-block">
-            StackInsights
+            {logoText}
           </span>
         </Link>
 
@@ -66,7 +84,7 @@ export function Navbar() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
             <Input
               type="search"
-              placeholder="Search posts..."
+              placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-9 pl-9 bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring"
@@ -75,9 +93,9 @@ export function Navbar() {
 
           {/* Create Button - Desktop */}
           <Button asChild size="sm" className="hidden md:flex">
-            <Link to="/create">
+            <Link to={createButtonLink}>
               <Plus className="mr-1.5 h-4 w-4" />
-              New Post
+              {createButtonText}
             </Link>
           </Button>
 
@@ -86,29 +104,57 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
                 <img
-                  src={profileImage}
-                  alt="User"
+                  src={currentProfile.avatar}
+                  alt={currentProfile.name}
                   className="h-7 w-7 rounded-full object-cover"
                 />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{currentProfile.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{currentProfile.role}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/profile/1" className="flex items-center">
+                <Link to={`/profile/${currentProfile.id}`} className="flex items-center">
                   <User className="mr-2 h-4 w-4" />
-                  My Profile
+                  {profileLabel}
                 </Link>
               </DropdownMenuItem>
-              {/* <DropdownMenuItem asChild>
-                <Link to="/profile/1" className="flex items-center">
-                  <FileText className="mr-2 h-4 w-4" />
-                  My Posts
-                </Link>
-              </DropdownMenuItem> */}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                <Users className="mr-2 h-3 w-3 inline" />
+                Switch Profile (Dev Mode)
+              </DropdownMenuLabel>
+              {allProfiles.map((profile) => (
+                <DropdownMenuItem
+                  key={profile.id}
+                  onClick={() => setCurrentProfile(profile)}
+                  className={cn(
+                    "pl-8 cursor-pointer",
+                    currentProfile.id === profile.id && "bg-accent"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profile.avatar}
+                      alt={profile.name}
+                      className="h-5 w-5 rounded-full object-cover"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm">{profile.name}</span>
+                      <span className="text-xs text-muted-foreground">{profile.team}</span>
+                    </div>
+                  </div>
+                </DropdownMenuItem>
+              ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
-                Logout
+                {logoutLabel}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -134,7 +180,7 @@ export function Navbar() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
               <Input
                 type="search"
-                placeholder="Search posts..."
+                placeholder={searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-10 pl-9 bg-muted border-0"
