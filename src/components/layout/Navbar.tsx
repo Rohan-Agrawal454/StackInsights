@@ -14,7 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 import { fetchNavbar } from '@/lib/contentstack-api';
 import type { NavbarContent } from '@/types/contentstack';
-import { useProfile } from '@/contexts/ProfileContext';
+import { useProfile } from '@/hooks/use-profile';
 
 export function Navbar() {
   const location = useLocation();
@@ -45,7 +45,7 @@ export function Navbar() {
   const logoutLabel = navbarData.user_menu.logout.label;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-surface-elevated/95 backdrop-blur supports-[backdrop-filter]:bg-surface-elevated/80">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-surface-elevated/95 backdrop-blur supports-backdrop-filter:bg-surface-elevated/80">
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
@@ -134,8 +134,8 @@ export function Navbar() {
                   key={profile.id}
                   onClick={() => setCurrentProfile(profile)}
                   className={cn(
-                    "pl-8 cursor-pointer",
-                    currentProfile.id === profile.id && "bg-accent"
+                    "pl-8 cursor-pointer hover:bg-muted ",
+                    currentProfile.id === profile.id && "bg-muted"
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function Navbar() {
                     />
                     <div className="flex flex-col">
                       <span className="text-sm">{profile.name}</span>
-                      <span className="text-xs text-muted-foreground">{profile.team}</span>
+                      <span className="text-xs ">{profile.team}</span>
                     </div>
                   </div>
                 </DropdownMenuItem>

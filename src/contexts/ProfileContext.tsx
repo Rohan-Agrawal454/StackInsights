@@ -1,13 +1,6 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { authors, type Author } from '@/lib/data';
-
-interface ProfileContextType {
-  currentProfile: Author;
-  setCurrentProfile: (author: Author) => void;
-  allProfiles: Author[];
-}
-
-const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+import { ProfileContext } from './profile-context';
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [currentProfile, setCurrentProfileState] = useState<Author>(() => {
@@ -41,12 +34,4 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       {children}
     </ProfileContext.Provider>
   );
-}
-
-export function useProfile() {
-  const context = useContext(ProfileContext);
-  if (context === undefined) {
-    throw new Error('useProfile must be used within a ProfileProvider');
-  }
-  return context;
 }
