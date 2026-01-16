@@ -18,15 +18,6 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
         to={`/post/${post.id}`}
         className="group block rounded-xl bg-card shadow-elevation-sm transition-all duration-200 hover:shadow-elevation-lg hover:-translate-y-1 border border-border overflow-hidden"
       >
-        {post.featuredImage && (
-          <div className="relative h-48 overflow-hidden">
-            <img
-              src={post.featuredImage}
-              alt={post.title}
-              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-            />
-          </div>
-        )}
         <div className="p-6">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -98,15 +89,6 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
       to={`/post/${post.id}`}
       className="group block rounded-lg border border-border bg-card transition-all duration-200 hover:shadow-elevation-md hover:border-border/80 hover:-translate-y-0.5 overflow-hidden"
     >
-      {post.featuredImage && (
-        <div className="relative h-40 overflow-hidden">
-          <img
-            src={post.featuredImage}
-            alt={post.title}
-            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-          />
-        </div>
-      )}
       <div className="p-5 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <Badge className={cn('font-medium', getCategoryColor(post.category))}>

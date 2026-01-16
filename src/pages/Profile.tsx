@@ -10,7 +10,6 @@ import { useTheme } from '@/hooks/use-theme';
 import type { Post, Author } from '@/types';
 import { getPostsByAuthor, fetchProfilePage, getAuthorById } from '@/lib/contentstack-api';
 import type { ProfilePageContent } from '@/types/contentstack';
-import { cn } from '@/lib/utils';
 
 export default function Profile() {
   const { id } = useParams<{ id: string }>();
@@ -150,10 +149,7 @@ export default function Profile() {
                       e.preventDefault();
                       navigate(`/edit/${post.id}`);
                     }}
-                    className={cn(
-                      "absolute right-3 z-10 h-7 gap-1.5 bg-card/95 backdrop-blur-sm shadow-sm border border-border opacity-0 group-hover/card:opacity-100 transition-all duration-200 hover:bg-accent hover:scale-105 hover:shadow-md",
-                      post.featuredImage ? "top-[168px]" : "top-3"
-                    )}
+                    className="absolute top-3 right-3 z-10 h-7 gap-1.5 bg-card/95 backdrop-blur-sm shadow-sm border border-border opacity-0 group-hover/card:opacity-100 transition-all duration-200 hover:bg-accent hover:scale-105 hover:shadow-md"
                   >
                     <Edit className="h-3.5 w-3.5" />
                     <span className="text-xs">{pageContent.posts_section.edit_button_text}</span>
