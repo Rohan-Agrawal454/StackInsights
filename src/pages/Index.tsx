@@ -63,7 +63,9 @@ export default function Index() {
   const ctaButtonLink = homepageData.cta.button_link.href;
 
   const displayFeaturedPosts = featuredPosts.slice(0, maxFeaturedPosts);
-  const latestPosts = allPosts.slice(0, maxLatestPosts);
+  const latestPosts = [...allPosts]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, maxLatestPosts);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

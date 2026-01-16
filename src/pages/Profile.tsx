@@ -29,7 +29,13 @@ export default function Profile() {
   useEffect(() => {
     if (id) {
       getAuthorById(id).then(setAuthor);
-      getPostsByAuthor(id).then(setAuthorPosts);
+      getPostsByAuthor(id).then(posts => {
+        // Sort posts by creation date (oldest first)
+        const sortedPosts = [...posts].sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        setAuthorPosts(sortedPosts);
+      });
     }
   }, [id]);
 

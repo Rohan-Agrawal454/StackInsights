@@ -46,19 +46,21 @@ export default function Browse() {
   }, [posts]);
 
   const filteredPosts = useMemo(() => {
-    return posts.filter((post: Post) => {
-      const matchesSearch = !search || 
-        post.title.toLowerCase().includes(search.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(search.toLowerCase()) ||
-        post.author.name.toLowerCase().includes(search.toLowerCase());
-      
-      const matchesTeam = selectedTeam === 'All Teams' || post.team === selectedTeam;
-      const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
-      const matchesTags = selectedTags.length === 0 || 
-        selectedTags.some(tag => post.tags.includes(tag));
-      
-      return matchesSearch && matchesTeam && matchesCategory && matchesTags;
-    });
+    return posts
+      .filter((post: Post) => {
+        const matchesSearch = !search || 
+          post.title.toLowerCase().includes(search.toLowerCase()) ||
+          post.excerpt.toLowerCase().includes(search.toLowerCase()) ||
+          post.author.name.toLowerCase().includes(search.toLowerCase());
+        
+        const matchesTeam = selectedTeam === 'All Teams' || post.team === selectedTeam;
+        const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
+        const matchesTags = selectedTags.length === 0 || 
+          selectedTags.some(tag => post.tags.includes(tag));
+        
+        return matchesSearch && matchesTeam && matchesCategory && matchesTags;
+      })
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }, [posts, search, selectedTeam, selectedCategory, selectedTags]);
 
   const toggleTag = (tag: string) => {
