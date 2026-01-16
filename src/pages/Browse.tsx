@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type Post } from '@/lib/data';
+import type { Post } from '@/types';
 import { getAllPosts, fetchBrowsePage, fetchTeams, fetchCategories } from '@/lib/contentstack-api';
 import type { BrowsePageContent, ContentstackTeam, ContentstackCategory } from '@/types/contentstack';
 

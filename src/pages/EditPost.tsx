@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { getCategoryColor, type PostCategory, type Post } from '@/lib/data';
+import type { PostCategory, Post } from '@/types';
+import { getCategoryColor } from '@/lib/category-utils';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { getPostByUid, fetchEditPostContent, fetchCategories, getAllPosts } from '@/lib/contentstack-api';

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { PostCard } from '@/components/posts/PostCard';
-import { getCategoryLabel, getCategoryColor, type Post } from '@/lib/data';
+import type { Post } from '@/types';
+import { getCategoryColor } from '@/lib/category-utils';
 import { getPostByUid, getAllPosts } from '@/lib/contentstack-api';
 import { cn } from '@/lib/utils';
 
@@ -80,7 +81,7 @@ export default function PostDetail() {
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <Badge className={getCategoryColor(post.category)}>
-                {getCategoryLabel(post.category)}
+                {post.categoryLabel}
               </Badge>
               <span className="text-sm text-text-tertiary">{post.team}</span>
             </div>

@@ -129,7 +129,7 @@ export function Navbar() {
                 <Users className="mr-2 h-3 w-3 inline" />
                 Switch Profile (Dev Mode)
               </DropdownMenuLabel>
-              {allProfiles.map((profile) => (
+              {[...allProfiles].sort((a, b) => parseInt(a.id) - parseInt(b.id)).map((profile) => (
                 <DropdownMenuItem
                   key={profile.id}
                   onClick={() => setCurrentProfile(profile)}

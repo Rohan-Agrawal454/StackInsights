@@ -11,9 +11,10 @@ import type {
   ContentstackTeam,
   ContentstackCategory,
   ContentstackPost,
+  ContentstackAuthor,
 } from '@/types/contentstack';
-import type { Post } from '@/lib/data';
-import { mapContentstackPostToPost, processCopyrightText } from './contentstack-helpers';
+import type { Post, Author } from '@/types';
+import { mapContentstackPostToPost, mapContentstackAuthorToAuthor, processCopyrightText } from './contentstack-helpers';
 
 export { processCopyrightText };
 
@@ -232,6 +233,57 @@ export async function fetchCategories(): Promise<ContentstackCategory[]> {
 }
 
 /**
+ * Fetch All Authors
+ */
+export async function fetchAuthors(): Promise<ContentstackAuthor[]> {
+  try {
+    const result = await Stack
+      .contentType('rohan_author')
+      .entry()
+      .query()
+      .find();
+    
+    if (result.entries && result.entries.length > 0) {
+      return result.entries as unknown as ContentstackAuthor[];
+    }
+    return [];
+  } catch (error) {
+    console.error('Error fetching authors:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch Author by ID
+ */
+export async function fetchAuthorById(authorId: string): Promise<ContentstackAuthor | null> {
+  try {
+    const allAuthors = await fetchAuthors();
+    return allAuthors.find(author => author.author_id.toString() === authorId) || null;
+  } catch (error) {
+    console.error('Error fetching author:', error);
+    return null;
+  }
+}
+
+/**
+ * Get all authors and convert to app format
+ */
+export async function getAllAuthors(): Promise<Author[]> {
+  const [csAuthors, teams] = await Promise.all([fetchAuthors(), fetchTeams()]);
+  return csAuthors.map(author => mapContentstackAuthorToAuthor(author, teams));
+}
+
+/**
+ * Get author by ID and convert to app format
+ */
+export async function getAuthorById(authorId: string): Promise<Author | null> {
+  const [csAuthor, teams] = await Promise.all([fetchAuthorById(authorId), fetchTeams()]);
+  if (!csAuthor) return null;
+  return mapContentstackAuthorToAuthor(csAuthor, teams);
+}
+
+/**
  * Fetch All Posts
  */
 export async function fetchPosts(): Promise<ContentstackPost[]> {
@@ -268,10 +320,19 @@ export async function fetchPostByUid(uid: string): Promise<ContentstackPost | nu
 /**
  * Fetch Posts by Author ID
  */
-export async function fetchPostsByAuthor(authorId: number): Promise<ContentstackPost[]> {
+export async function fetchPostsByAuthor(authorId: string): Promise<ContentstackPost[]> {
   try {
     const allPosts = await fetchPosts();
-    return allPosts.filter(post => post.author_id === authorId);
+    return allPosts.filter(post => {
+      const authorRef = post.author_id?.[0];
+      if (!authorRef) return false;
+      // Check if it's a populated reference or just a UID
+      if ('author_id' in authorRef) {
+        return (authorRef as ContentstackAuthor).author_id.toString() === authorId;
+      }
+      // For unpopulated references, we need to fetch and compare
+      return false; // Will be handled in the conversion step
+    });
   } catch (error) {
     console.error('Error fetching posts by author:', error);
     return [];
@@ -295,38 +356,61 @@ export async function fetchFeaturedPosts(): Promise<ContentstackPost[]> {
  * Get all posts and convert to app format
  */
 export async function getAllPosts(): Promise<Post[]> {
-  const csPosts = await fetchPosts();
+  const [csPosts, csAuthors, teams, categories] = await Promise.all([
+    fetchPosts(),
+    fetchAuthors(),
+    fetchTeams(),
+    fetchCategories()
+  ]);
   return csPosts
-    .map(mapContentstackPostToPost)
+    .map(post => mapContentstackPostToPost(post, csAuthors, teams, categories))
     .filter((post): post is Post => post !== null);
 }
 
 /**
  * Get posts by author and convert to app format
  */
-export async function getPostsByAuthor(authorId: number): Promise<Post[]> {
-  const csPosts = await fetchPostsByAuthor(authorId);
+export async function getPostsByAuthor(authorId: string): Promise<Post[]> {
+  const [csPosts, csAuthors, teams, categories] = await Promise.all([
+    fetchPosts(),
+    fetchAuthors(),
+    fetchTeams(),
+    fetchCategories()
+  ]);
+  
+  // Filter posts by author after conversion
   return csPosts
-    .map(mapContentstackPostToPost)
-    .filter((post): post is Post => post !== null);
+    .map(post => mapContentstackPostToPost(post, csAuthors, teams, categories))
+    .filter((post): post is Post => post !== null)
+    .filter(post => post.author.id === authorId);
 }
 
 /**
  * Get single post by uid and convert to app format
  */
 export async function getPostByUid(uid: string): Promise<Post | null> {
-  const csPost = await fetchPostByUid(uid);
+  const [csPost, csAuthors, teams, categories] = await Promise.all([
+    fetchPostByUid(uid),
+    fetchAuthors(),
+    fetchTeams(),
+    fetchCategories()
+  ]);
   if (!csPost) return null;
-  return mapContentstackPostToPost(csPost);
+  return mapContentstackPostToPost(csPost, csAuthors, teams, categories);
 }
 
 /**
  * Get featured posts and convert to app format
  */
 export async function getFeaturedPosts(): Promise<Post[]> {
-  const csPosts = await fetchFeaturedPosts();
+  const [csPosts, csAuthors, teams, categories] = await Promise.all([
+    fetchFeaturedPosts(),
+    fetchAuthors(),
+    fetchTeams(),
+    fetchCategories()
+  ]);
   return csPosts
-    .map(mapContentstackPostToPost)
+    .map(post => mapContentstackPostToPost(post, csAuthors, teams, categories))
     .filter((post): post is Post => post !== null);
 }
 

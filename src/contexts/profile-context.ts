@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { Author } from '@/lib/data';
+import type { Author } from '@/types';
 
 export interface ProfileContextType {
   currentProfile: Author;

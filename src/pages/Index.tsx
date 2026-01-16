@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search-input';
 import { PostCard } from '@/components/posts/PostCard';
 import { CategoryCard } from '@/components/posts/CategoryCard';
-import { type Post, type PostCategory } from '@/lib/data';
+import type { Post, PostCategory } from '@/types';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchHomepage, getAllPosts, getFeaturedPosts, fetchCategories } from '@/lib/contentstack-api';
@@ -171,7 +171,7 @@ export default function Index() {
               </Button>
             )}
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {latestPosts.map((post: Post) => (
               <PostCard key={post.id} post={post} />
             ))}

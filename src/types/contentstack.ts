@@ -2,6 +2,34 @@
  * Contentstack Content Type Interfaces
  */
 
+// Author Types
+export interface ContentstackAuthor {
+  uid: string;
+  title: string;
+  author_id: number; // Changed to number to match actual API response
+  full_name: string;
+  role: string;
+  team: Array<{
+    uid: string;
+    _content_type_uid: string;
+    team_name?: string; // Optional, only present if populated
+    team_value?: string; // Optional, only present if populated
+  }>;
+  location?: string;
+  avatar?: {
+    url: string;
+    filename: string;
+  };
+  bio?: string;
+  email?: string;
+  posts?: Array<{
+    uid: string;
+    _content_type_uid: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+
 // Post Types
 export interface ContentstackPost {
   uid: string;
@@ -10,7 +38,7 @@ export interface ContentstackPost {
   category: 'insight' | 'incident' | 'retrospective';
   excerpt: string;
   featured: boolean;
-  author_id: number;
+  author_id: ContentstackAuthor[] | Array<{ uid: string; _content_type_uid: string }>; // Reference field (can be populated or just UIDs)
   tags_post: string; // Multiline text with newline-separated tags
   published_date: string;
   content: {

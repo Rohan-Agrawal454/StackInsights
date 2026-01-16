@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Clock, Calendar } from 'lucide-react';
-import { type Post, getCategoryLabel, getCategoryColor } from '@/lib/data';
+import type { Post } from '@/types';
+import { getCategoryColor } from '@/lib/category-utils';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +21,7 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
           <div className="flex-1 space-y-3">
             <div className="flex items-center gap-2">
               <Badge className={cn('font-medium', getCategoryColor(post.category))}>
-                {getCategoryLabel(post.category)}
+                {post.categoryLabel}
               </Badge>
               <span className="text-sm text-text-tertiary">{post.team}</span>
             </div>
@@ -60,7 +61,7 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
         <div className="flex-1 space-y-1.5">
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className={cn('text-xs', getCategoryColor(post.category))}>
-              {getCategoryLabel(post.category)}
+              {post.categoryLabel}
             </Badge>
           </div>
           <h4 className="font-medium text-text-primary group-hover:text-link transition-colors line-clamp-2">
@@ -84,9 +85,9 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <Badge className={cn('font-medium', getCategoryColor(post.category))}>
-            {getCategoryLabel(post.category)}
+            {post.categoryLabel}
           </Badge>
-          <span className="text-xs text-text-tertiary">{post.team}</span>
+          <span className="text-xs text-text-tertiary truncate">{post.team}</span>
         </div>
         
         <h3 className="font-semibold text-text-primary group-hover:text-link transition-colors line-clamp-2">
@@ -100,9 +101,9 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
             <img
               src={post.author.avatar}
               alt={post.author.name}
-              className="h-5 w-5 rounded-full object-cover"
+              className="h-5 w-5 rounded-full object-cover shrink-0"
             />
-            <span className="text-sm text-text-secondary">{post.author.name}</span>
+            <span className="text-sm text-text-secondary truncate">{post.author.name}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-text-tertiary">
             <div className="flex items-center gap-1">

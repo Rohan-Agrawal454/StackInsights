@@ -7,15 +7,15 @@ import { Separator } from '@/components/ui/separator';
 import { PostCard } from '@/components/posts/PostCard';
 import { Toggle } from '@/components/ui/toggle';
 import { useTheme } from '@/hooks/use-theme';
-import { authors, type Post } from '@/lib/data';
-import { getPostsByAuthor, fetchProfilePage } from '@/lib/contentstack-api';
+import type { Post, Author } from '@/types';
+import { getPostsByAuthor, fetchProfilePage, getAuthorById } from '@/lib/contentstack-api';
 import type { ProfilePageContent } from '@/types/contentstack';
 
 export default function Profile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const author = authors.find(a => a.id === id);
+  const [author, setAuthor] = useState<Author | null>(null);
   const [authorPosts, setAuthorPosts] = useState<Post[]>([]);
   const [pageContent, setPageContent] = useState<ProfilePageContent | null>(null);
   
@@ -27,7 +27,8 @@ export default function Profile() {
 
   useEffect(() => {
     if (id) {
-      getPostsByAuthor(parseInt(id)).then(setAuthorPosts);
+      getAuthorById(id).then(setAuthor);
+      getPostsByAuthor(id).then(setAuthorPosts);
     }
   }, [id]);
 

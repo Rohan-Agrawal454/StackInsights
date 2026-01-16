@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Lightbulb, AlertTriangle, RotateCcw } from 'lucide-react';
-import { type PostCategory } from '@/lib/data';
+import type { PostCategory } from '@/types';
 import { cn } from '@/lib/utils';
 import type { ComponentType } from 'react';
 import type { SVGProps } from 'react';
