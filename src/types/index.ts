@@ -33,6 +33,7 @@ export interface Post {
   category: PostCategory;
   categoryLabel: string; // Display label from CMS
   featuredImage?: string; // Image URL from CMS
+  rating?: number; // Star rating (0-5)
   author: Author;
   team: string;
   tags: string[];

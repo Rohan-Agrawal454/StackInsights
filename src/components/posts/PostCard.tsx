@@ -3,6 +3,7 @@ import { Clock, Calendar } from 'lucide-react';
 import type { Post } from '@/types';
 import { getCategoryColor } from '@/lib/category-utils';
 import { Badge } from '@/components/ui/badge';
+import { StarRating } from '@/components/ui/star-rating';
 import { cn } from '@/lib/utils';
 
 interface PostCardProps {
@@ -32,6 +33,12 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
               <Badge className={cn('font-medium', getCategoryColor(post.category))}>
                 {post.categoryLabel}
               </Badge>
+              {post.rating && post.rating > 0 && (
+                <>
+                  <span className="text-text-tertiary">•</span>
+                  <StarRating rating={post.rating} size="sm" />
+                </>
+              )}
               {/* <span className="text-sm text-text-tertiary">{post.team}</span> */}
             </div>
             
@@ -124,6 +131,9 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
             <span className="text-sm text-text-secondary truncate">{post.author.name}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-text-tertiary">
+            {post.rating && post.rating > 0 && (
+              <StarRating rating={post.rating} size="sm" />
+            )}
             <div className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
               <span>{new Date(post.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { PostCard } from '@/components/posts/PostCard';
+import { StarRating } from '@/components/ui/star-rating';
 import type { Post } from '@/types';
 import { getCategoryColor } from '@/lib/category-utils';
 import { getPostByUid, getAllPosts } from '@/lib/contentstack-api';
@@ -84,6 +85,12 @@ export default function PostDetail() {
                 {post.categoryLabel}
               </Badge>
               <span className="text-sm text-text-tertiary">{post.team}</span>
+              {post.rating && post.rating > 0 && (
+                <>
+                  <span className="text-text-tertiary">•</span>
+                  <StarRating rating={post.rating} showValue />
+                </>
+              )}
             </div>
             
             <h1 className="text-3xl font-bold text-text-primary md:text-4xl">

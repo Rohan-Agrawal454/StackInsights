@@ -38,6 +38,9 @@ export interface ContentstackPost {
   category: 'Insight' | 'Incident' | 'Retrospective';
   excerpt: string;
   featured: boolean;
+  rating?: {
+    value: number;
+  };
   featured_image?: {
     url: string;
     filename: string;
