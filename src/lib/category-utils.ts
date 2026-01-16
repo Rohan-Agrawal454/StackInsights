@@ -8,9 +8,9 @@ import type { PostCategory } from '@/types';
  */
 export function getCategoryColor(category: PostCategory): string {
   const colors: Record<PostCategory, string> = {
-    insight: 'bg-insight/10 text-insight',
-    incident: 'bg-incident/10 text-incident',
-    retrospective: 'bg-retro/10 text-retro',
+    Insight: 'bg-insight/10 text-insight',
+    Incident: 'bg-incident/10 text-incident',
+    Retrospective: 'bg-retro/10 text-retro',
   };
   return colors[category];
 }

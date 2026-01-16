@@ -35,9 +35,14 @@ export interface ContentstackPost {
   uid: string;
   title: string;
   title_post: string;
-  category: 'insight' | 'incident' | 'retrospective';
+  category: 'Insight' | 'Incident' | 'Retrospective';
   excerpt: string;
   featured: boolean;
+  featured_image?: {
+    url: string;
+    filename: string;
+    title?: string;
+  };
   author_id: ContentstackAuthor[] | Array<{ uid: string; _content_type_uid: string }>; // Reference field (can be populated or just UIDs)
   tags_post: string; // Multiline text with newline-separated tags
   published_date: string;

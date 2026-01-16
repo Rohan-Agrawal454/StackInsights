@@ -99,6 +99,7 @@ export function mapContentstackPostToPost(
     },
     category: csPost.category,
     categoryLabel,
+    featuredImage: csPost.featured_image?.url,
     author,
     team: author.team,
     tags,

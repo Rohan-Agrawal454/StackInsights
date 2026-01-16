@@ -3,7 +3,7 @@
  * All data comes from Contentstack CMS
  */
 
-export type PostCategory = 'insight' | 'incident' | 'retrospective';
+export type PostCategory = 'Insight' | 'Incident' | 'Retrospective';
 
 export interface Author {
   id: string;
@@ -32,6 +32,7 @@ export interface Post {
   content: PostContent;
   category: PostCategory;
   categoryLabel: string; // Display label from CMS
+  featuredImage?: string; // Image URL from CMS
   author: Author;
   team: string;
   tags: string[];

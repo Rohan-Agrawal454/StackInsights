@@ -11,19 +11,19 @@ interface CategoryCardProps {
 }
 
 const categoryConfig: Record<PostCategory, { icon: ComponentType<SVGProps<SVGSVGElement>>; label: string; description: string; colorClass: string }> = {
-  insight: {
+  Insight: {
     icon: Lightbulb,
     label: 'Insights',
     description: 'Technical learnings and best practices',
     colorClass: 'bg-insight/10 text-insight border-insight/20',
   },
-  incident: {
+  Incident: {
     icon: AlertTriangle,
     label: 'Incidents',
     description: 'Post-mortems and failure analysis',
     colorClass: 'bg-incident/10 text-incident border-incident/20',
   },
-  retrospective: {
+  Retrospective: {
     icon: RotateCcw,
     label: 'Retrospectives',
     description: 'Team reflections and improvements',

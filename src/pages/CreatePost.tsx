@@ -31,6 +31,7 @@ export default function CreatePost() {
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [category, setCategory] = useState<string>('');
+  const [featuredImage, setFeaturedImage] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
   const [context, setContext] = useState('');
@@ -184,6 +185,37 @@ export default function CreatePost() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-text-tertiary">{pageContent.form_labels.post_type_help_text}</p>
+            </div>
+
+            {/* Featured Image */}
+            <div className="space-y-2">
+              <Label htmlFor="featuredImage" className="text-sm font-medium">
+                Featured Image
+              </Label>
+              <Input
+                id="featuredImage"
+                type="url"
+                placeholder="https://images.contentstack.io/v3/assets/..."
+                value={featuredImage}
+                onChange={(e) => setFeaturedImage(e.target.value)}
+                className="bg-card"
+              />
+              <p className="text-xs text-text-tertiary">
+                Optional. Paste the image URL from Contentstack Assets (after uploading).
+              </p>
+              {featuredImage && (
+                <div className="mt-2 rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={featuredImage}
+                    alt="Preview"
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = '';
+                      e.currentTarget.alt = 'Invalid image URL';
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Tags */}

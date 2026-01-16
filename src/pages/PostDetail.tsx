@@ -121,6 +121,17 @@ export default function PostDetail() {
               </div>
             </div>
 
+            {/* Featured Image */}
+            {post.featuredImage && (
+              <div className="mt-6 rounded-lg overflow-hidden">
+                <img
+                  src={post.featuredImage}
+                  alt={post.title}
+                  className="w-full h-auto object-cover"
+                />
+              </div>
+            )}
+
             {/* Tags */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Tag className="h-4 w-4 text-text-tertiary" />

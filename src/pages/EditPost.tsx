@@ -35,6 +35,7 @@ export default function EditPost() {
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [category, setCategory] = useState<string>('');
+  const [featuredImage, setFeaturedImage] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
   const [context, setContext] = useState('');
@@ -60,6 +61,7 @@ export default function EditPost() {
         setTitle(fetchedPost.title);
         setExcerpt(fetchedPost.excerpt);
         setCategory(fetchedPost.category);
+        setFeaturedImage(fetchedPost.featuredImage || '');
         setSelectedTags(fetchedPost.tags);
         setContext(fetchedPost.content.context || '');
         setProblem(fetchedPost.content.problem || '');
@@ -227,7 +229,38 @@ export default function EditPost() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-text-tertiary">{pageContent.form_labels.team_label}: {post.team} {pageContent.form_labels.team_help_text && `(${pageContent.form_labels.team_help_text.toLowerCase()})`}</p>
+              {/* <p className="text-xs text-text-tertiary">{pageContent.form_labels.team_label}: {post.team} {pageContent.form_labels.team_help_text && `(${pageContent.form_labels.team_help_text.toLowerCase()})`}</p> */}
+            </div>
+
+            {/* Featured Image */}
+            <div className="space-y-2">
+              <Label htmlFor="featuredImage" className="text-sm font-medium">
+                Featured Image
+              </Label>
+              <Input
+                id="featuredImage"
+                type="url"
+                placeholder="https://images.contentstack.io/v3/assets/..."
+                value={featuredImage}
+                onChange={(e) => setFeaturedImage(e.target.value)}
+                className="bg-card"
+              />
+              <p className="text-xs text-text-tertiary">
+                Optional. Paste the image URL from Contentstack Assets (after uploading).
+              </p>
+              {featuredImage && (
+                <div className="mt-2 rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={featuredImage}
+                    alt="Preview"
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = '';
+                      e.currentTarget.alt = 'Invalid image URL';
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Tags */}
