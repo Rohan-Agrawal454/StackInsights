@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, Zap } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { SearchInput } from '@/components/ui/search-input';
 import { PostCard } from '@/components/posts/PostCard';
@@ -16,6 +16,7 @@ import {
 import type { Post } from '@/types';
 import { getAllPosts, fetchBrowsePage, fetchTeams, fetchCategories } from '@/lib/contentstack-api';
 import type { BrowsePageContent, ContentstackTeam, ContentstackCategory } from '@/types/contentstack';
+import { useAlgoliaSearch } from '@/hooks/use-algolia-search';
 
 export default function Browse() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,6 +29,16 @@ export default function Browse() {
   const [selectedTeam, setSelectedTeam] = useState(searchParams.get('team') || 'All Teams');
   const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get('category') || 'all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+
+  // Use Algolia search hook
+  const { 
+    results: algoliaResults, 
+    isSearching
+  } = useAlgoliaSearch(search, {
+    category: selectedCategory,
+    team: selectedTeam,
+    tags: selectedTags,
+  });
 
   useEffect(() => {
     getAllPosts().then(setPosts);
@@ -46,22 +57,23 @@ export default function Browse() {
   }, [posts]);
 
   const filteredPosts = useMemo(() => {
+    // ONLY use Algolia search - no fallback
+    if (search.trim()) {
+      return algoliaResults.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
+
+    // When no search query, show all posts with filters
     return posts
       .filter((post: Post) => {
-        const matchesSearch = !search || 
-          post.title.toLowerCase().includes(search.toLowerCase()) ||
-          post.excerpt.toLowerCase().includes(search.toLowerCase()) ||
-          post.author.name.toLowerCase().includes(search.toLowerCase());
-        
         const matchesTeam = selectedTeam === 'All Teams' || post.team === selectedTeam;
         const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
         const matchesTags = selectedTags.length === 0 || 
           selectedTags.some(tag => post.tags.includes(tag));
         
-        return matchesSearch && matchesTeam && matchesCategory && matchesTags;
+        return matchesTeam && matchesCategory && matchesTags;
       })
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }, [posts, search, selectedTeam, selectedCategory, selectedTags]);
+  }, [posts, search, selectedTeam, selectedCategory, selectedTags, algoliaResults]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev => 
@@ -122,12 +134,25 @@ export default function Browse() {
         <div className="mb-8 space-y-4">
           {/* Search and main filters */}
           <div className="flex flex-col gap-4 sm:flex-row">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder={searchPlaceholder}
-              className="flex-1"
-            />
+            <div className="flex-1 relative">
+              <SearchInput
+                value={search}
+                onChange={setSearch}
+                placeholder={searchPlaceholder}
+                className="flex-1"
+              />
+              {search.trim() && !isSearching && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-primary bg-primary/10 px-2 py-1 rounded-md pointer-events-none">
+                  <Zap className="h-3 w-3" />
+                  <span className="hidden sm:inline">Algolia</span>
+                </div>
+              )}
+              {isSearching && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                  Searching...
+                </div>
+              )}
+            </div>
             <div className="flex gap-2">
               <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                 <SelectTrigger className="w-40 bg-card">
