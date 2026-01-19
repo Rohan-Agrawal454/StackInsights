@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, Plus, User, LogOut, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import { useProfile } from '@/hooks/use-profile';
 
 export function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { currentProfile, setCurrentProfile, allProfiles } = useProfile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,6 +27,14 @@ export function Navbar() {
   useEffect(() => {
     fetchNavbar().then(setNavbarData);
   }, []);
+
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/browse?search=${encodeURIComponent(searchQuery.trim())}`);
+      setMobileMenuOpen(false);
+    }
+  };
 
   if (!navbarData) {
     return null; // or loading state
@@ -80,16 +89,17 @@ export function Navbar() {
         {/* Search and Actions */}
         <div className="flex items-center gap-3">
           {/* Desktop Search */}
-          <div className="relative hidden w-64 lg:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+          <form onSubmit={handleSearch} className="relative hidden w-64 lg:block">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary pointer-events-none" />
             <Input
               type="search"
               placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="h-9 pl-9 bg-muted border-0 focus-visible:ring-1 focus-visible:ring-ring"
             />
-          </div>
+          </form>
 
           {/* Create Button - Desktop */}
           <Button asChild size="sm" className="hidden md:flex">
@@ -176,16 +186,17 @@ export function Navbar() {
         <div className="border-t border-border bg-surface-elevated md:hidden animate-fade-in">
           <div className="container py-4 space-y-3">
             {/* Mobile Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
+            <form onSubmit={handleSearch} className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary pointer-events-none" />
               <Input
                 type="search"
                 placeholder={searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="h-10 pl-9 bg-muted border-0"
               />
-            </div>
+            </form>
             
             {/* Mobile Nav Links */}
             <nav className="flex flex-col gap-1">
