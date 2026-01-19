@@ -27,6 +27,7 @@ export interface PostContent {
 
 export interface Post {
   id: string;
+  uid?: string; // Contentstack unique identifier
   title: string;
   excerpt: string;
   content: PostContent;

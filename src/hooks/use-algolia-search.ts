@@ -121,7 +121,12 @@ export function useAlgoliaSearch(query: string, filters: SearchFilters = {}) {
           );
         }
 
-        setResults(filtered);
+        // Remove duplicates based on uid
+        const uniquePosts = Array.from(
+          new Map(filtered.map(post => [post.uid || post.id, post])).values()
+        );
+
+        setResults(uniquePosts);
       } catch (err) {
         console.error('Algolia search error:', err);
         setError('Search failed. Please try again.');
