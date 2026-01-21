@@ -8,7 +8,7 @@ import { CategoryCard } from '@/components/posts/CategoryCard';
 import type { Post, PostCategory } from '@/types';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchHomepage, getAllPosts, fetchCategories } from '@/lib/contentstack-api';
+import { fetchHomepage, fetchPersonalizedHomepage, getAllPosts, fetchCategories } from '@/lib/contentstack-api';
 import type { HomepageContent, ContentstackCategory } from '@/types/contentstack';
 import { useProfile } from '@/hooks/use-profile';
 import { getPersonalizedPosts, getUserAttributes } from '@/lib/personalization';
@@ -21,11 +21,43 @@ export default function Index() {
   const { currentProfile } = useProfile();
   const navigate = useNavigate();
   
+  // Fetch homepage with personalization based on user profile
   useEffect(() => {
-    fetchHomepage().then(setHomepageData);
+    const loadHomepage = async () => {
+      if (currentProfile) {
+        const userAttrs = getUserAttributes(currentProfile.id);
+        
+        console.log('👤 Current profile:', currentProfile.name, 'User attributes:', userAttrs);
+        
+        // If user has behavior data (favorite category), fetch personalized homepage
+        if (userAttrs.favourite_category) {
+          console.log('🎯 User has behavior data, fetching personalized homepage...');
+          const personalizedData = await fetchPersonalizedHomepage(currentProfile.id, {
+            team: currentProfile.team,
+            reading_frequency: userAttrs.reading_frequency,
+            expertise_level: userAttrs.expertise_level,
+            favourite_category: userAttrs.favourite_category,
+            is_engineering_team_reader: userAttrs.is_engineering_team_reader,
+          });
+          setHomepageData(personalizedData);
+        } else {
+          // No behavior yet, fetch default
+          console.log('ℹ️ No user behavior yet (no favourite_category), fetching default homepage');
+          const defaultData = await fetchHomepage();
+          setHomepageData(defaultData);
+        }
+      } else {
+        // No profile selected, fetch default
+        console.log('ℹ️ No profile selected, fetching default homepage');
+        const defaultData = await fetchHomepage();
+        setHomepageData(defaultData);
+      }
+    };
+    
+    loadHomepage();
     getAllPosts().then(setAllPosts);
     fetchCategories().then(setCategories);
-  }, []);
+  }, [currentProfile]);
 
   const categoryCounts = useMemo(() => {
     return categories.reduce((acc: Record<string, number>, cat) => {

@@ -61,7 +61,8 @@ export async function fetchFooter(): Promise<FooterContent | null> {
 }
 
 /**
- * Fetch Homepage Content (Singleton)
+ * Fetch Homepage Content (Default)
+ * Specifically looks for the entry titled "HomePage" for the default homepage
  */
 export async function fetchHomepage(): Promise<HomepageContent | null> {
   try {
@@ -69,15 +70,156 @@ export async function fetchHomepage(): Promise<HomepageContent | null> {
       .contentType('rohan_homepage')
       .entry()
       .query()
+      .limit(20) // Get all entries to search for default
       .find();
     
     if (result.entries && result.entries.length > 0) {
+      // Look for entry specifically titled "HomePage" for the default
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const defaultEntry = result.entries.find((entry: any) => entry.title === 'HomePage');
+      
+      if (defaultEntry) {
+        console.log('✅ Found default homepage entry: "HomePage"');
+        return defaultEntry as unknown as HomepageContent;
+      }
+      
+      // If no "HomePage" entry found, use the first entry
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.log(`⚠️ No entry titled "HomePage" found, using first entry: "${(result.entries[0] as any)?.title}"`);
       return result.entries[0] as unknown as HomepageContent;
     }
     return null;
   } catch (error) {
     console.error('Error fetching homepage:', error);
     return null;
+  }
+}
+
+/**
+ * Fetch ALL Homepage entries from Contentstack
+ * Returns all homepage variants stored as separate entries
+ */
+export async function fetchAllHomepages(): Promise<HomepageContent[]> {
+  try {
+    // Fetch ALL homepage entries - set limit high to get all variants
+    const result = await Stack
+      .contentType('rohan_homepage')
+      .entry()
+      .query()
+      .limit(20) // Get up to 20 homepage variants
+      .find();
+    
+    if (result.entries && result.entries.length > 0) {
+      console.log(`📦 Fetched ${result.entries.length} homepage entries from CMS`);
+      // List all entry titles for debugging
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const titles = result.entries.map((entry: any) => entry.title || 'Untitled').join(', ');
+      console.log(`   Entries: ${titles}`);
+      return result.entries as unknown as HomepageContent[];
+    }
+    console.log('⚠️ No homepage entries found in CMS');
+    return [];
+  } catch (error) {
+    console.error('❌ Error fetching all homepages:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch Personalized Homepage from CMS
+ * Fetches all homepage entries and selects the right one based on user attributes
+ */
+export async function fetchPersonalizedHomepage(userId: string, attributes: {
+  team: string;
+  reading_frequency: string;
+  expertise_level: string;
+  favourite_category: string;
+  is_engineering_team_reader: boolean;
+}): Promise<HomepageContent | null> {
+  const PERSONALIZE_ENABLED = import.meta.env.VITE_CONTENTSTACK_PERSONALIZE_ENABLED === 'true';
+  
+  if (!PERSONALIZE_ENABLED) {
+    console.log('ℹ️ Personalize not enabled, fetching default homepage');
+    return fetchHomepage();
+  }
+  
+  try {
+    // Fetch all homepage entries from CMS
+    const allHomepages = await fetchAllHomepages();
+    
+    if (allHomepages.length === 0) {
+      return fetchHomepage();
+    }
+    
+    // Determine which variant to use based on user attributes (audience matching)
+    let targetTitle: string | null = null; // null = use default (first entry)
+    let audienceName = 'Default User';
+    
+    // Priority-based audience matching (same as your Contentstack audiences)
+    
+    // 1. Power Users (highest priority)
+    if (attributes.reading_frequency === 'daily' && attributes.expertise_level === 'expert') {
+      targetTitle = 'HomePage_PowerUsers';
+      audienceName = 'Power User';
+    }
+    // 2. Insight Enthusiasts
+    else if (attributes.favourite_category === 'Insight' && attributes.reading_frequency !== 'occasional') {
+      targetTitle = 'HomePage_Insights';
+      audienceName = 'Insight Enthusiast';
+    }
+    // 3. Incident Responders
+    else if (attributes.favourite_category === 'Incident' && ['intermediate', 'expert'].includes(attributes.expertise_level)) {
+      targetTitle = 'HomePage_Incident';
+      audienceName = 'Incident Responder';
+    }
+    // 5. Retrospective Readers
+    else if (attributes.favourite_category === 'Retrospective') {
+      targetTitle = 'HomePage_Retrospective';
+      audienceName = 'Retrospective Reader';
+    }
+    
+    // If no specific audience matched, return the default entry
+    if (!targetTitle) {
+      console.log(`ℹ️ No specific audience matched for user "${userId}", looking for default homepage`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const defaultEntry = allHomepages.find((entry: any) => entry.title === 'HomePage');
+      if (defaultEntry) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.log(`✅ Using default homepage entry: "${(defaultEntry as any).title}"`);
+        return defaultEntry;
+      }
+      // If no entry titled "HomePage", use first entry
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.log(`⚠️ No entry titled "HomePage" found, using first entry: "${(allHomepages[0] as any)?.title}"`);
+      return allHomepages[0] || null;
+    }
+    
+    console.log(`🎯 User "${userId}" matched audience: "${audienceName}" → Looking for entry: "${targetTitle}"`);
+    
+    // Find the matching homepage entry by title
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const matchedEntry = allHomepages.find((entry: any) => entry.title === targetTitle);
+    
+    if (matchedEntry) {
+      console.log(`✨ Found personalized homepage entry: "${targetTitle}" for user "${userId}"`);
+      return matchedEntry;
+    }
+    
+    // If specific variant not found, fallback to default
+    console.log(`⚠️ Entry "${targetTitle}" not found in CMS, falling back to default homepage`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const defaultEntry = allHomepages.find((entry: any) => entry.title === 'HomePage');
+    if (defaultEntry) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.log(`✅ Using default homepage entry: "${(defaultEntry as any).title}"`);
+      return defaultEntry;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log(`⚠️ No entry titled "HomePage" found, using first entry: "${(allHomepages[0] as any)?.title}"`);
+    return allHomepages[0] || null;
+  } catch (error) {
+    console.error('❌ Error fetching personalized homepage:', error);
+    return fetchHomepage();
   }
 }
 
