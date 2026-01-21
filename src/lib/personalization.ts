@@ -13,6 +13,7 @@ export interface UserBehaviorData {
   categoryViews: Record<PostCategory, number>;
   lastActive: number;
   totalTimeSpent: number; // in seconds
+  engineeringTeamPostsViewed: number; // Count of posts from Product/Infrastructure/Launch teams
 }
 
 export interface UserAttributesData {
@@ -22,6 +23,7 @@ export interface UserAttributesData {
   favourite_category: PostCategory | '';
   read_count: number;
   total_time_spent: number;
+  is_engineering_team_reader: boolean;
 }
 
 const STORAGE_KEY_PREFIX = 'user_behavior_';
@@ -49,6 +51,7 @@ export const getUserBehavior = (userId: string): UserBehaviorData => {
     },
     lastActive: Date.now(),
     totalTimeSpent: 0,
+    engineeringTeamPostsViewed: 0,
   };
 };
 
@@ -189,6 +192,10 @@ export const initializeUserAttributes = (userId: string, team: string) => {
 export const getUserAttributes = (userId: string): UserAttributesData => {
   const behavior = getUserBehavior(userId);
   
+  // Check if user is an "engineering team reader"
+  const isEngineeringTeamReader = behavior.readCount > 0 && behavior.engineeringTeamPostsViewed >= 3 && 
+    (behavior.engineeringTeamPostsViewed / behavior.readCount) > 0.5;
+  
   return {
     team: behavior.team,
     reading_frequency: calculateReadingFrequency(behavior),
@@ -196,6 +203,7 @@ export const getUserAttributes = (userId: string): UserAttributesData => {
     favourite_category: getFavoriteCategory(behavior),
     read_count: behavior.readCount,
     total_time_spent: behavior.totalTimeSpent,
+    is_engineering_team_reader: isEngineeringTeamReader,
   };
 };
 
@@ -206,4 +214,73 @@ export const resetUserBehavior = (userId: string) => {
   const key = `${STORAGE_KEY_PREFIX}${userId}`;
   localStorage.removeItem(key);
   console.log('🔄 User behavior reset for:', userId);
+};
+
+/**
+ * Get personalized post recommendations based on user behavior
+ */
+export const getPersonalizedPosts = (userId: string, allPosts: Post[], limit: number = 4): Post[] => {
+  const attributes = getUserAttributes(userId);
+  const behavior = getUserBehavior(userId);
+  
+  // If user is new (no reads), return recent posts
+  if (behavior.readCount === 0) {
+    return allPosts
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  }
+  
+  // Score each post based on user preferences
+  const scoredPosts = allPosts.map(post => {
+    let score = 0;
+    
+    // 1. Favorite category match (40 points)
+    if (attributes.favourite_category && post.category === attributes.favourite_category) {
+      score += 40;
+    }
+    
+    // 2. Engineering team reader preference (30 points)
+    if (attributes.is_engineering_team_reader) {
+      const isEngineeringPost = post.team === 'Product' || post.team === 'Infrastructure' || post.team === 'Launch';
+      if (isEngineeringPost) {
+        score += 30;
+      }
+    }
+    
+    // 3. Tag overlap (20 points max)
+    const userTags = new Set<string>();
+    Object.entries(behavior.categoryViews).forEach(([category, count]) => {
+      if (count > 0) {
+        // Infer common tags from categories they read
+        userTags.add(category.toLowerCase());
+      }
+    });
+    
+    const tagMatches = post.tags.filter(tag => 
+      userTags.has(tag.toLowerCase())
+    ).length;
+    score += Math.min(20, tagMatches * 5);
+    
+    // 4. Recency bonus (10 points for recent posts)
+    const daysSincePublished = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSincePublished < 7) {
+      score += 10;
+    } else if (daysSincePublished < 30) {
+      score += 5;
+    }
+    
+    // 5. Expertise level match (bonus points)
+    // Show more complex posts to experts
+    if (attributes.expertise_level === 'expert' && post.category === 'Insight') {
+      score += 5;
+    }
+    
+    return { post, score };
+  });
+  
+  // Sort by score and return top N
+  return scoredPosts
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(item => item.post);
 };
