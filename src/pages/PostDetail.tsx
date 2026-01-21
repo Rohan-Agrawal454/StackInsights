@@ -11,9 +11,12 @@ import type { Post } from '@/types';
 import { getCategoryColor } from '@/lib/category-utils';
 import { getPostByUid, getAllPosts } from '@/lib/contentstack-api';
 import { cn } from '@/lib/utils';
+import { useProfile } from '@/hooks/use-profile';
+import { trackPostView, trackTimeSpent } from '@/lib/personalization';
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();
+  const { currentProfile } = useProfile();
   const [post, setPost] = useState<Post | null>(null);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,9 +31,28 @@ export default function PostDetail() {
       setPost(fetchedPost);
       setAllPosts(posts);
       setLoading(false);
+      
+      // Track post view for personalization
+      if (fetchedPost && currentProfile) {
+        trackPostView(currentProfile.id, fetchedPost, currentProfile.team);
+      }
     };
     fetchData();
-  }, [id]);
+  }, [id, currentProfile]);
+  
+  // Track time spent on page
+  useEffect(() => {
+    if (!post || !currentProfile) return;
+    
+    const startTime = Date.now();
+    
+    return () => {
+      const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+      if (timeSpent > 5) { 
+        trackTimeSpent(currentProfile.id, timeSpent);
+      }
+    };
+  }, [post, currentProfile]);
   
   if (loading) {
     return null;

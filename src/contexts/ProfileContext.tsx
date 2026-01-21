@@ -2,6 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import type { Author } from '@/types';
 import { getAllAuthors } from '@/lib/contentstack-api';
 import { ProfileContext } from './profile-context';
+import { initializeUserAttributes } from '@/lib/personalization';
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [authors, setAuthors] = useState<Author[]>([]);
@@ -19,7 +20,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         ? fetchedAuthors.find(a => a.id === savedProfileId)
         : fetchedAuthors[0];
       
-      setCurrentProfileState(defaultProfile || fetchedAuthors[0]);
+      const profile = defaultProfile || fetchedAuthors[0];
+      setCurrentProfileState(profile);
+      
+      // Initialize personalization for this user
+      if (profile) {
+        initializeUserAttributes(profile.id, profile.team);
+      }
+      
       setIsLoading(false);
     });
   }, []);
@@ -27,6 +35,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const setCurrentProfile = (author: Author) => {
     setCurrentProfileState(author);
     localStorage.setItem('currentProfileId', author.id);
+    
+    // Re-initialize personalization for new profile
+    initializeUserAttributes(author.id, author.team);
   };
 
   useEffect(() => {

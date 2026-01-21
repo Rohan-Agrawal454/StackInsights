@@ -7,6 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { PostCard } from '@/components/posts/PostCard';
 import { Toggle } from '@/components/ui/toggle';
 import { useTheme } from '@/hooks/use-theme';
+import { useProfile } from '@/hooks/use-profile';
+import { PersonalizationDashboard } from '@/components/PersonalizationDashboard';
 import type { Post, Author } from '@/types';
 import { getPostsByAuthor, fetchProfilePage, getAuthorById } from '@/lib/contentstack-api';
 import type { ProfilePageContent } from '@/types/contentstack';
@@ -15,11 +17,13 @@ export default function Profile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { currentProfile } = useProfile();
   const [author, setAuthor] = useState<Author | null>(null);
   const [authorPosts, setAuthorPosts] = useState<Post[]>([]);
   const [pageContent, setPageContent] = useState<ProfilePageContent | null>(null);
   
   const isDark = theme === 'dark';
+  const isOwnProfile = currentProfile && author && currentProfile.id === author.id;
 
   useEffect(() => {
     fetchProfilePage().then(setPageContent);
@@ -129,6 +133,14 @@ export default function Profile() {
         </div>
 
         <Separator className="mb-8" />
+
+        {/* Personalization Dashboard (only for own profile) */}
+        {isOwnProfile && (
+          <>
+            <PersonalizationDashboard />
+            <Separator className="my-8" />
+          </>
+        )}
 
         {/* Posts */}
         <div>
