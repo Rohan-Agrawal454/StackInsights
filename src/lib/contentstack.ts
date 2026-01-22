@@ -17,7 +17,7 @@ export interface PersonalizationAttributes {
   team: string;
   reading_frequency: 'daily' | 'weekly' | 'occasional';
   expertise_level: 'beginner' | 'intermediate' | 'expert';
-  favourite_category: string;
+  favorite_category: string;
 }
 
 /**
@@ -43,7 +43,7 @@ export const setUserAttributes = (userId: string, attributes: Partial<Personaliz
     team: attributes.team || '',
     reading_frequency: attributes.reading_frequency || 'occasional',
     expertise_level: attributes.expertise_level || 'beginner',
-    favourite_category: attributes.favourite_category || '',
+    favorite_category: attributes.favorite_category || '',
   };
   
   // Store in sessionStorage for persistence across page reloads

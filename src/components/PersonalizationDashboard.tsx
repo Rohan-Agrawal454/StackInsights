@@ -120,7 +120,7 @@ export function PersonalizationDashboard() {
             <div>
               <p className="text-sm text-text-secondary">Favorite</p>
               <Badge variant="default" className="mt-1">
-                {attributes.favourite_category || 'None yet'}
+                {attributes.favorite_category || 'None yet'}
               </Badge>
             </div>
           </div>
@@ -158,19 +158,19 @@ export function PersonalizationDashboard() {
           {attributes.team && (
             <Badge variant="outline">{attributes.team} Team Member</Badge>
           )}
-          {attributes.favourite_category === 'Insight' && attributes.reading_frequency !== 'occasional' && (
+          {attributes.favorite_category === 'Insight' && attributes.reading_frequency !== 'occasional' && (
             <Badge variant="outline">Insight Enthusiast</Badge>
           )}
-          {attributes.favourite_category === 'Incident' && ['intermediate', 'expert'].includes(attributes.expertise_level) && (
+          {attributes.favorite_category === 'Incident' && ['intermediate', 'expert'].includes(attributes.expertise_level) && (
             <Badge variant="outline">Incident Responder</Badge>
           )}
-          {attributes.favourite_category === 'Retrospective' && (
+          {attributes.favorite_category === 'Retrospective' && (
             <Badge variant="outline">Retrospective Reader</Badge>
           )}
           {attributes.reading_frequency === 'daily' && attributes.expertise_level === 'expert' && (
             <Badge variant="outline">Power User</Badge>
           )}
-          {(attributes.reading_frequency === 'occasional' || !attributes.favourite_category) && (
+          {(attributes.reading_frequency === 'occasional' || !attributes.favorite_category) && (
             <Badge variant="outline">New User</Badge>
           )}
         </div>

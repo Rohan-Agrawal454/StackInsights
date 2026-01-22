@@ -20,7 +20,7 @@ export interface UserAttributesData {
   team: string;
   reading_frequency: 'daily' | 'weekly' | 'occasional';
   expertise_level: 'beginner' | 'intermediate' | 'expert';
-  favourite_category: PostCategory | '';
+  favorite_category: PostCategory | '';
   read_count: number;
   total_time_spent: number;
   is_engineering_team_reader: boolean;
@@ -139,7 +139,7 @@ export const trackPostView = (userId: string, post: Post, userTeam: string) => {
     team: behavior.team,
     reading_frequency: calculateReadingFrequency(behavior),
     expertise_level: calculateExpertiseLevel(behavior),
-    favourite_category: getFavoriteCategory(behavior),
+    favorite_category: getFavoriteCategory(behavior),
   };
   
   // Sync to Contentstack Personalize
@@ -176,7 +176,7 @@ export const initializeUserAttributes = (userId: string, team: string) => {
     team: behavior.team || team,
     reading_frequency: calculateReadingFrequency(behavior),
     expertise_level: calculateExpertiseLevel(behavior),
-    favourite_category: getFavoriteCategory(behavior),
+    favorite_category: getFavoriteCategory(behavior),
   };
   
   setUserAttributes(userId, attributes);
@@ -200,7 +200,7 @@ export const getUserAttributes = (userId: string): UserAttributesData => {
     team: behavior.team,
     reading_frequency: calculateReadingFrequency(behavior),
     expertise_level: calculateExpertiseLevel(behavior),
-    favourite_category: getFavoriteCategory(behavior),
+    favorite_category: getFavoriteCategory(behavior),
     read_count: behavior.readCount,
     total_time_spent: behavior.totalTimeSpent,
     is_engineering_team_reader: isEngineeringTeamReader,
@@ -235,7 +235,7 @@ export const getPersonalizedPosts = (userId: string, allPosts: Post[], limit: nu
     let score = 0;
     
     // 1. Favorite category match (40 points)
-    if (attributes.favourite_category && post.category === attributes.favourite_category) {
+    if (attributes.favorite_category && post.category === attributes.favorite_category) {
       score += 40;
     }
     

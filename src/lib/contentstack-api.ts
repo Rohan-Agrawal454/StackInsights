@@ -1,4 +1,5 @@
 import Stack from './contentstack';
+import Personalize from '@contentstack/personalize-edge-sdk';
 import type {
   NavbarContent,
   FooterContent,
@@ -126,99 +127,144 @@ export async function fetchAllHomepages(): Promise<HomepageContent[]> {
 }
 
 /**
- * Fetch Personalized Homepage from CMS
- * Fetches all homepage entries and selects the right one based on user attributes
+ * Fetch Personalized Homepage using Contentstack Personalize Edge SDK
+ * This uses the official Personalize SDK to fetch variant-based content from Contentstack
  */
 export async function fetchPersonalizedHomepage(userId: string, attributes: {
   team: string;
   reading_frequency: string;
   expertise_level: string;
-  favourite_category: string;
+  favorite_category: string;
   is_engineering_team_reader: boolean;
 }): Promise<HomepageContent | null> {
   const PERSONALIZE_ENABLED = import.meta.env.VITE_CONTENTSTACK_PERSONALIZE_ENABLED === 'true';
+  const PERSONALIZE_PROJECT_UID = import.meta.env.VITE_CONTENTSTACK_PERSONALIZE_PROJECT_ID;
   
-  if (!PERSONALIZE_ENABLED) {
-    console.log('ℹ️ Personalize not enabled, fetching default homepage');
+  if (!PERSONALIZE_ENABLED || !PERSONALIZE_PROJECT_UID) {
+    console.log('ℹ️ Personalize not configured, fetching default homepage');
     return fetchHomepage();
   }
   
   try {
-    // Fetch all homepage entries from CMS
-    const allHomepages = await fetchAllHomepages();
+    console.log('🎯 Initializing Contentstack Personalize Edge SDK...');
+    console.log('   User ID:', userId);
+    console.log('   Attributes:', JSON.stringify(attributes, null, 2));
     
-    if (allHomepages.length === 0) {
-      return fetchHomepage();
+    // Initialize Personalize Edge SDK with user ID first
+    const personalizeSdk = await Personalize.init(PERSONALIZE_PROJECT_UID, {
+      userId: userId,
+    });
+    
+    console.log('✅ Personalize SDK initialized');
+    
+    // Set user attributes explicitly using the set() method
+    // This persists attributes to Contentstack's edge network
+    // IMPORTANT: Keys must match exactly what's configured in Contentstack Attributes
+    await personalizeSdk.set({
+      team: attributes.team,
+      reading_frequency: attributes.reading_frequency,
+      expertise_level: attributes.expertise_level,
+      favorite_category: attributes.favorite_category,
+      is_engineering_team_reader: String(attributes.is_engineering_team_reader),
+    });
+    
+    console.log('✅ User attributes set:', {
+      team: attributes.team,
+      reading_frequency: attributes.reading_frequency,
+      expertise_level: attributes.expertise_level,
+      favorite_category: attributes.favorite_category,
+      is_engineering_team_reader: String(attributes.is_engineering_team_reader),
+    });
+    
+    // Get active experiences and variant aliases
+    const experiences = personalizeSdk.getExperiences();
+    const variantAliases = personalizeSdk.getVariantAliases();
+    
+    console.log('📊 Active Experiences:', experiences);
+    console.log('🎨 Variant Aliases:', variantAliases);
+    
+    // Debug: Check if any variant is active
+    if (experiences && experiences.length > 0) {
+      experiences.forEach((exp, index) => {
+        if (exp.activeVariantShortUid === null) {
+          console.warn(`⚠️ Experience ${index + 1} (shortUid: ${exp.shortUid}): No variant matched!`);
+          console.warn('   Possible reasons:');
+          console.warn('   1. User attributes don\'t match any audience criteria');
+          console.warn('   2. Experience isn\'t published or active');
+          console.warn('   3. No variants configured for this experience');
+        } else {
+          console.log(`✅ Experience ${index + 1} (shortUid: ${exp.shortUid}): Variant ${exp.activeVariantShortUid} matched`);
+        }
+      });
     }
     
-    // Determine which variant to use based on user attributes (audience matching)
-    let targetTitle: string | null = null; // null = use default (first entry)
-    let audienceName = 'Default User';
-    
-    // Priority-based audience matching (same as your Contentstack audiences)
-    
-    // 1. Power Users (highest priority)
-    if (attributes.reading_frequency === 'daily' && attributes.expertise_level === 'expert') {
-      targetTitle = 'HomePage_PowerUsers';
-      audienceName = 'Power User';
-    }
-    // 2. Insight Enthusiasts
-    else if (attributes.favourite_category === 'Insight' && attributes.reading_frequency !== 'occasional') {
-      targetTitle = 'HomePage_Insights';
-      audienceName = 'Insight Enthusiast';
-    }
-    // 3. Incident Responders
-    else if (attributes.favourite_category === 'Incident' && ['intermediate', 'expert'].includes(attributes.expertise_level)) {
-      targetTitle = 'HomePage_Incident';
-      audienceName = 'Incident Responder';
-    }
-    // 5. Retrospective Readers
-    else if (attributes.favourite_category === 'Retrospective') {
-      targetTitle = 'HomePage_Retrospective';
-      audienceName = 'Retrospective Reader';
+    if (!variantAliases || variantAliases.length === 0) {
+      console.warn('⚠️ No variant aliases returned - user will see default content');
+      console.warn('   Check Contentstack Personalize dashboard to ensure:');
+      console.warn('   1. Experience is Published and Active');
+      console.warn('   2. Audiences are configured correctly');
+      console.warn('   3. User attributes match at least one audience');
     }
     
-    // If no specific audience matched, return the default entry
-    if (!targetTitle) {
-      console.log(`ℹ️ No specific audience matched for user "${userId}", looking for default homepage`);
+    // Step 1: Get the default homepage entry to find its UID
+    const defaultHomepage = await fetchHomepage();
+    if (!defaultHomepage) {
+      console.warn('⚠️ Could not fetch default homepage');
+      return null;
+    }
+    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const homepageUid = (defaultHomepage as any).uid;
+    if (!homepageUid) {
+      console.warn('⚠️ Homepage UID not found in default entry');
+      return defaultHomepage;
+    }
+    
+    console.log('📍 Homepage Entry UID:', homepageUid);
+    
+    // Step 2: Fetch the entry with variants using the .variants() method
+    const entryCall = Stack
+      .contentType('rohan_homepage')
+      .entry(homepageUid);
+    
+    let personalizedEntry;
+    
+    if (variantAliases && variantAliases.length > 0) {
+      console.log('🎯 Fetching personalized variant...');
+      // Convert variant aliases array to comma-separated string
+      const variantAliasString = variantAliases.join(',');
+      console.log('   Variant Alias String:', variantAliasString);
+      
+      // Use the .variants() method as per Contentstack documentation
+      personalizedEntry = await entryCall.variants(variantAliasString).fetch();
+    } else {
+      console.log('ℹ️ No variants matched, fetching default content');
+      personalizedEntry = await entryCall.fetch();
+    }
+    
+    if (personalizedEntry) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const defaultEntry = allHomepages.find((entry: any) => entry.title === 'HomePage');
-      if (defaultEntry) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        console.log(`✅ Using default homepage entry: "${(defaultEntry as any).title}"`);
-        return defaultEntry;
+      console.log('✨ Personalized content fetched:', (personalizedEntry as any).title);
+      console.log('   📈 Impression tracked in Contentstack Analytics!');
+      
+      // Trigger impression event for analytics if a variant was selected
+      if (experiences.length > 0 && experiences[0].activeVariantShortUid) {
+        try {
+          await personalizeSdk.triggerImpression(experiences[0].shortUid);
+          console.log('   📊 Impression event triggered');
+        } catch (error) {
+          console.warn('   ⚠️ Could not trigger impression:', error);
+        }
       }
-      // If no entry titled "HomePage", use first entry
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      console.log(`⚠️ No entry titled "HomePage" found, using first entry: "${(allHomepages[0] as any)?.title}"`);
-      return allHomepages[0] || null;
+      
+      return personalizedEntry as unknown as HomepageContent;
     }
     
-    console.log(`🎯 User "${userId}" matched audience: "${audienceName}" → Looking for entry: "${targetTitle}"`);
-    
-    // Find the matching homepage entry by title
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const matchedEntry = allHomepages.find((entry: any) => entry.title === targetTitle);
-    
-    if (matchedEntry) {
-      console.log(`✨ Found personalized homepage entry: "${targetTitle}" for user "${userId}"`);
-      return matchedEntry;
-    }
-    
-    // If specific variant not found, fallback to default
-    console.log(`⚠️ Entry "${targetTitle}" not found in CMS, falling back to default homepage`);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const defaultEntry = allHomepages.find((entry: any) => entry.title === 'HomePage');
-    if (defaultEntry) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      console.log(`✅ Using default homepage entry: "${(defaultEntry as any).title}"`);
-      return defaultEntry;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log(`⚠️ No entry titled "HomePage" found, using first entry: "${(allHomepages[0] as any)?.title}"`);
-    return allHomepages[0] || null;
+    console.log('⚠️ No personalized content found, using default');
+    return defaultHomepage;
   } catch (error) {
     console.error('❌ Error fetching personalized homepage:', error);
+    console.error('   Falling back to default homepage');
     return fetchHomepage();
   }
 }

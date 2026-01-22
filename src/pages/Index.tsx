@@ -30,19 +30,19 @@ export default function Index() {
         console.log('👤 Current profile:', currentProfile.name, 'User attributes:', userAttrs);
         
         // If user has behavior data (favorite category), fetch personalized homepage
-        if (userAttrs.favourite_category) {
+        if (userAttrs.favorite_category) {
           console.log('🎯 User has behavior data, fetching personalized homepage...');
           const personalizedData = await fetchPersonalizedHomepage(currentProfile.id, {
             team: currentProfile.team,
             reading_frequency: userAttrs.reading_frequency,
             expertise_level: userAttrs.expertise_level,
-            favourite_category: userAttrs.favourite_category,
+            favorite_category: userAttrs.favorite_category,
             is_engineering_team_reader: userAttrs.is_engineering_team_reader,
           });
           setHomepageData(personalizedData);
         } else {
           // No behavior yet, fetch default
-          console.log('ℹ️ No user behavior yet (no favourite_category), fetching default homepage');
+          console.log('ℹ️ No user behavior yet (no favorite_category), fetching default homepage');
           const defaultData = await fetchHomepage();
           setHomepageData(defaultData);
         }
@@ -110,8 +110,8 @@ export default function Index() {
     
     const reasons: string[] = [];
     
-    if (userAttributes.favourite_category) {
-      reasons.push(`${userAttributes.favourite_category} posts`);
+    if (userAttributes.favorite_category) {
+      reasons.push(`${userAttributes.favorite_category} posts`);
     }
     
     if (userAttributes.is_engineering_team_reader) {
@@ -237,10 +237,10 @@ export default function Index() {
                     Your Profile
                   </span>
                   <div className="h-4 w-px bg-border" />
-                  {userAttributes.favourite_category && (
+                  {userAttributes.favorite_category && (
                     <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary ring-1 ring-primary/20 transition-all hover:bg-primary/15">
                       <span>❤️</span>
-                      <span>Loves {userAttributes.favourite_category}</span>
+                      <span>Loves {userAttributes.favorite_category}</span>
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm font-medium text-text-primary ring-1 ring-border capitalize transition-all hover:bg-muted/80">
