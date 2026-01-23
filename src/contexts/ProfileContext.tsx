@@ -38,6 +38,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     
     // Re-initialize personalization for new profile
     initializeUserAttributes(author.id, author.team);
+    
+    // Hard refresh to reinitialize Personalize SDK with new user
+    window.location.reload();
   };
 
   useEffect(() => {
