@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useProfile } from '@/hooks/use-profile';
-import { getUserAttributes, getUserBehavior, resetUserBehavior, type UserAttributesData, type UserBehaviorData } from '@/lib/personalization';
+import { getUserAttributes, getUserBehavior, resetUserBehavior, type UserAttributesData, type UserBehaviorData } from '@/lib/personalization-rules';
 import { BarChart3, Target, TrendingUp, Award, RefreshCw } from 'lucide-react';
 import type { PostCategory } from '@/types';
 

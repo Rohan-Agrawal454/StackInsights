@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Users, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, Users, TrendingUp } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { SearchInput } from '@/components/ui/search-input';
@@ -8,47 +8,44 @@ import { CategoryCard } from '@/components/posts/CategoryCard';
 import type { Post, PostCategory } from '@/types';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchHomepage, fetchPersonalizedHomepage, getAllPosts, fetchCategories } from '@/lib/contentstack-api';
+import { fetchHomepage, fetchPersonalizedHomepage, getAllPosts, getFeaturedPosts, fetchCategories } from '@/lib/contentstack-api';
 import type { HomepageContent, ContentstackCategory } from '@/types/contentstack';
 import { useProfile } from '@/hooks/use-profile';
-import { getPersonalizedPosts, getUserAttributes } from '@/lib/personalization';
+import { getUserAttributes } from '@/lib/personalization-rules';
 
 export default function Index() {
   const [searchQuery, setSearchQuery] = useState('');
   const [homepageData, setHomepageData] = useState<HomepageContent | null>(null);
   const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [featuredPosts, setFeaturedPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<ContentstackCategory[]>([]);
   const { currentProfile } = useProfile();
   const navigate = useNavigate();
   
-  // Fetch homepage with personalization based on user profile
+  // Fetch homepage with personalization
+  // Always attempts personalization if configured, falls back to default if needed
   useEffect(() => {
     const loadHomepage = async () => {
       if (currentProfile) {
+        // Get user attributes (even if empty/new user)
         const userAttrs = getUserAttributes(currentProfile.id);
         
-        console.log('👤 Current profile:', currentProfile.name, 'User attributes:', userAttrs);
+        console.log('👤 Loading homepage for:', currentProfile.name);
         
-        // If user has behavior data (favorite category), fetch personalized homepage
-        if (userAttrs.favorite_category) {
-          console.log('🎯 User has behavior data, fetching personalized homepage...');
-          const personalizedData = await fetchPersonalizedHomepage(currentProfile.id, {
-            team: currentProfile.team,
-            reading_frequency: userAttrs.reading_frequency,
-            expertise_level: userAttrs.expertise_level,
-            favorite_category: userAttrs.favorite_category,
-            is_engineering_team_reader: userAttrs.is_engineering_team_reader,
-          });
-          setHomepageData(personalizedData);
-        } else {
-          // No behavior yet, fetch default
-          console.log('ℹ️ No user behavior yet (no favorite_category), fetching default homepage');
-          const defaultData = await fetchHomepage();
-          setHomepageData(defaultData);
-        }
+        // Always call fetchPersonalizedHomepage
+        // It will handle fallback to default if Personalize is not configured
+        // or if no variant matches
+        const homepageData = await fetchPersonalizedHomepage(currentProfile.id, {
+          team: currentProfile.team,
+          reading_frequency: userAttrs.reading_frequency,
+          expertise_level: userAttrs.expertise_level,
+          favorite_category: userAttrs.favorite_category,
+          is_engineering_team_reader: userAttrs.is_engineering_team_reader,
+        });
+        
+        setHomepageData(homepageData);
       } else {
         // No profile selected, fetch default
-        console.log('ℹ️ No profile selected, fetching default homepage');
         const defaultData = await fetchHomepage();
         setHomepageData(defaultData);
       }
@@ -56,6 +53,7 @@ export default function Index() {
     
     loadHomepage();
     getAllPosts().then(setAllPosts);
+    getFeaturedPosts().then(setFeaturedPosts);
     fetchCategories().then(setCategories);
   }, [currentProfile]);
 
@@ -83,6 +81,7 @@ export default function Index() {
   const categoriesTitle = homepageData.categories.title;
   const showViewAllLink = homepageData.categories.show_view_all_link;
   
+  const featuredPostsTitle = homepageData.featured_posts.title || "Featured Posts";
   const maxFeaturedPosts = homepageData.featured_posts.max_posts;
   
   const latestPostsTitle = homepageData.latest_posts.title;
@@ -94,38 +93,8 @@ export default function Index() {
   const ctaButtonText = homepageData.cta.button_text;
   const ctaButtonLink = homepageData.cta.button_link.href;
 
-  // Get personalized posts based on user behavior
-  const personalizedPosts = currentProfile 
-    ? getPersonalizedPosts(currentProfile.id, allPosts, maxFeaturedPosts)
-    : [];
-  
-  // Get user attributes for recommendation explanation
-  const userAttributes = currentProfile ? getUserAttributes(currentProfile.id) : null;
-  
-  // Generate recommendation reason text
-  const getRecommendationReason = () => {
-    if (!userAttributes || userAttributes.read_count === 0) {
-      return "Recent posts to get you started";
-    }
-    
-    const reasons: string[] = [];
-    
-    if (userAttributes.favorite_category) {
-      reasons.push(`${userAttributes.favorite_category} posts`);
-    }
-    
-    if (userAttributes.is_engineering_team_reader) {
-      reasons.push("engineering team content");
-    }
-    
-    if (userAttributes.expertise_level === 'expert') {
-      reasons.push("advanced topics");
-    }
-    
-    return reasons.length > 0 
-      ? `Based on your interest in ${reasons.join(', ')}`
-      : "Based on your reading history";
-  };
+  // Show featured posts (limited by CMS config)
+  const displayedFeaturedPosts = featuredPosts.slice(0, maxFeaturedPosts);
     
   const latestPosts = [...allPosts]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -210,59 +179,15 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Personalized Posts */}
-      {personalizedPosts.length > 0 && (
+      {/* Featured Posts */}
+      {displayedFeaturedPosts.length > 0 && (
         <section className="border-t border-border bg-linear-to-b from-muted/30 to-background py-12 md:py-16">
           <div className="container">
-            <div className="mb-10">
-              {/* Header */}
-              <div className="flex items-start gap-4 mb-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-4 ring-primary/5">
-                  <Sparkles className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
-                    Recommended for You
-                  </h2>
-                  <p className="text-base text-text-secondary">
-                    {getRecommendationReason()}
-                  </p>
-                </div>
-              </div>
-              
-              {/* User Profile Badges */}
-              {userAttributes && userAttributes.read_count > 0 && (
-                <div className="ml-16 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card/50 p-4 backdrop-blur-sm">
-                  <span className="text-xs font-medium text-text-tertiary uppercase tracking-wide">
-                    Your Profile
-                  </span>
-                  <div className="h-4 w-px bg-border" />
-                  {userAttributes.favorite_category && (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary ring-1 ring-primary/20 transition-all hover:bg-primary/15">
-                      <span>❤️</span>
-                      <span>Loves {userAttributes.favorite_category}</span>
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-sm font-medium text-text-primary ring-1 ring-border capitalize transition-all hover:bg-muted/80">
-                    <span>⭐</span>
-                    <span>{userAttributes.expertise_level}</span>
-                  </span>
-                  {userAttributes.is_engineering_team_reader && (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-1.5 text-sm font-semibold text-accent ring-1 ring-accent/20 transition-all hover:bg-accent/15">
-                      <span>🚀</span>
-                      <span>Engineering Reader</span>
-                    </span>
-                  )}
-                  <span className="ml-auto text-xs text-text-tertiary">
-                    {userAttributes.read_count} {userAttributes.read_count === 1 ? 'post' : 'posts'} read
-                  </span>
-                </div>
-              )}
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold text-text-primary">{featuredPostsTitle}</h2>
             </div>
-            
-            {/* Posts Grid */}
             <div className="grid gap-6 md:grid-cols-2">
-              {personalizedPosts.map((post: Post) => (
+              {displayedFeaturedPosts.map((post: Post) => (
                 <PostCard key={post.id} post={post} variant="featured" />
               ))}
             </div>

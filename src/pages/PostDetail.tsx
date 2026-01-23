@@ -12,7 +12,7 @@ import { getCategoryColor } from '@/lib/category-utils';
 import { getPostByUid, getAllPosts } from '@/lib/contentstack-api';
 import { cn } from '@/lib/utils';
 import { useProfile } from '@/hooks/use-profile';
-import { trackPostView, trackTimeSpent } from '@/lib/personalization';
+import { trackPostView, trackTimeSpent } from '@/lib/personalization-rules';
 
 export default function PostDetail() {
   const { id } = useParams<{ id: string }>();

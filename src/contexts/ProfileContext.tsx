@@ -2,7 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import type { Author } from '@/types';
 import { getAllAuthors } from '@/lib/contentstack-api';
 import { ProfileContext } from './profile-context';
-import { initializeUserAttributes } from '@/lib/personalization';
+import { initializeUserAttributes } from '@/lib/personalization-rules';
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [authors, setAuthors] = useState<Author[]>([]);
