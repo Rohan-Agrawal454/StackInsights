@@ -56,7 +56,11 @@ class PersonalizeSDKManager {
     userId: string,
     attributes: PersonalizationAttributes
   ): Promise<{ experiences: Experience[]; variantAliases: string[] }> {
-    // Initialize SDK if needed
+    // Always reset SDK to force fresh initialization and manifest fetch
+    console.log('🔄 Resetting SDK for fresh manifest');
+    this.sdk = null;
+    
+    // Initialize SDK with user ID
     const sdk = await this.initialize(userId);
     if (!sdk) {
       return { experiences: [], variantAliases: [] };
