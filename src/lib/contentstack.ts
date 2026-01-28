@@ -48,8 +48,6 @@ export const setUserAttributes = (userId: string, attributes: Partial<Personaliz
   
   // Store in sessionStorage for persistence across page reloads
   sessionStorage.setItem('personalization_attributes', JSON.stringify(currentUserAttributes));
-  
-  console.log('✨ Personalization attributes set:', currentUserAttributes);
 };
 
 /**

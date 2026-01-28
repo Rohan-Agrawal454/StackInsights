@@ -181,8 +181,6 @@ export const initializeUserAttributes = (userId: string, team: string) => {
   
   setUserAttributes(userId, attributes);
   
-  console.log('🎯 Personalization initialized:', { userId, attributes });
-  
   return attributes;
 };
 
