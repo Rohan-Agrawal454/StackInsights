@@ -1,25 +1,30 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { createContext, useState, useEffect, type ReactNode } from 'react';
 import type { Author } from '@/types';
 import { getAllAuthors } from '@/lib/contentstack-api';
-import { ProfileContext } from './profile-context';
 import { initializeUserAttributes, cleanupOtherUsersBehavior } from '@/lib/personalization-rules';
 
+// Context type and creation
+export interface ProfileContextType {
+  currentProfile: Author;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+
+// Provider component
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [authors, setAuthors] = useState<Author[]>([]);
-  const [currentProfile, setCurrentProfileState] = useState<Author | null>(null);
+  const [currentProfile, setCurrentProfile] = useState<Author | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch authors from Contentstack on mount
+  // Fetch Rohan's profile from Contentstack on mount
   useEffect(() => {
+    // Clean up any old behavior data from other users
     cleanupOtherUsersBehavior();
     
     getAllAuthors().then((fetchedAuthors) => {
-      setAuthors(fetchedAuthors);
-      
-      // Always default to Rohan (author_id: 1)
       const rohanProfile = fetchedAuthors.find(a => a.id === '1') || fetchedAuthors[0];
       
-      setCurrentProfileState(rohanProfile);
+      setCurrentProfile(rohanProfile);
       
       // Initialize personalization for Rohan
       if (rohanProfile) {
@@ -30,19 +35,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Disabled profile switching - Rohan is the only user
-  const setCurrentProfile = () => {
-    // Profile switching is disabled
-    console.warn('Profile switching is disabled. Rohan is the default user.');
-  };
-
-  // Show loading state while fetching authors
   if (isLoading || !currentProfile) {
     return null;
   }
 
   return (
-    <ProfileContext.Provider value={{ currentProfile, setCurrentProfile, allProfiles: authors }}>
+    <ProfileContext.Provider value={{ currentProfile }}>
       {children}
     </ProfileContext.Provider>
   );
