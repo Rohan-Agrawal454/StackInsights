@@ -3,7 +3,7 @@ import type { Author } from '@/types';
 
 export interface ProfileContextType {
   currentProfile: Author;
-  setCurrentProfile: (author: Author) => void;
+  setCurrentProfile: () => void;
   allProfiles: Author[];
 }
 

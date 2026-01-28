@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, Plus, User, LogOut, Users } from 'lucide-react';
+import { Search, Menu, X, Plus, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -19,7 +19,7 @@ import { useProfile } from '@/hooks/use-profile';
 export function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentProfile, setCurrentProfile, allProfiles } = useProfile();
+  const { currentProfile } = useProfile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [navbarData, setNavbarData] = useState<NavbarContent | null>(null);
@@ -134,33 +134,6 @@ export function Navbar() {
                   {profileLabel}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
-                <Users className="mr-2 h-3 w-3 inline" />
-                Switch Profile (Dev Mode)
-              </DropdownMenuLabel>
-              {[...allProfiles].sort((a, b) => parseInt(a.id) - parseInt(b.id)).map((profile) => (
-                <DropdownMenuItem
-                  key={profile.id}
-                  onClick={() => setCurrentProfile(profile)}
-                  className={cn(
-                    "pl-8 cursor-pointer hover:bg-muted ",
-                    currentProfile.id === profile.id && "bg-muted"
-                  )}
-                >
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={profile.avatar}
-                      alt={profile.name}
-                      className="h-5 w-5 rounded-full object-cover"
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-sm">{profile.name}</span>
-                      <span className="text-xs ">{profile.team}</span>
-                    </div>
-                  </div>
-                </DropdownMenuItem>
-              ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />

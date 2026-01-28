@@ -27,11 +27,48 @@ export interface UserAttributesData {
 }
 
 const STORAGE_KEY_PREFIX = 'user_behavior_';
+const ROHAN_USER_ID = '1'; // Only Rohan's behavior is tracked
+
+/**
+ * Clean up behavior data for all users except Rohan
+ * Call this once when the app initializes
+ */
+export const cleanupOtherUsersBehavior = () => {
+  const keys = Object.keys(localStorage);
+  
+  keys.forEach(key => {
+    if (key.startsWith(STORAGE_KEY_PREFIX)) {
+      const userId = key.replace(STORAGE_KEY_PREFIX, '');
+      if (userId !== ROHAN_USER_ID) {
+        localStorage.removeItem(key);
+      }
+    }
+  });
+};
 
 /**
  * Get user behavior data from localStorage
+ * Only returns data for Rohan (user ID '1')
  */
 export const getUserBehavior = (userId: string): UserBehaviorData => {
+  // Only track behavior for Rohan
+  if (userId !== ROHAN_USER_ID) {
+    // Return empty behavior for other users (not saved to localStorage)
+    return {
+      userId,
+      team: '',
+      readCount: 0,
+      categoryViews: {
+        'Insight': 0,
+        'Incident': 0,
+        'Retrospective': 0,
+      },
+      lastActive: Date.now(),
+      totalTimeSpent: 0,
+      engineeringTeamPostsViewed: 0,
+    };
+  }
+  
   const key = `${STORAGE_KEY_PREFIX}${userId}`;
   const stored = localStorage.getItem(key);
   
@@ -39,7 +76,7 @@ export const getUserBehavior = (userId: string): UserBehaviorData => {
     return JSON.parse(stored);
   }
   
-  // Default behavior data for new users
+  // Default behavior data for Rohan
   return {
     userId,
     team: '',
@@ -57,8 +94,14 @@ export const getUserBehavior = (userId: string): UserBehaviorData => {
 
 /**
  * Save user behavior data to localStorage
+ * Only saves data for Rohan (user ID '1')
  */
 const saveBehavior = (data: UserBehaviorData) => {
+  // Only save behavior for Rohan
+  if (data.userId !== ROHAN_USER_ID) {
+    return; // Don't save to localStorage for other users
+  }
+  
   const key = `${STORAGE_KEY_PREFIX}${data.userId}`;
   localStorage.setItem(key, JSON.stringify(data));
 };
@@ -109,8 +152,14 @@ let lastTrackedPost: { postId: string; timestamp: number } | null = null;
 /**
  * Track when a user views a post
  * Updates behavior data and syncs with Contentstack
+ * Only tracks behavior for Rohan (user ID '1')
  */
 export const trackPostView = (userId: string, post: Post, userTeam: string) => {
+  // Only track behavior for Rohan
+  if (userId !== ROHAN_USER_ID) {
+    return;
+  }
+  
   // Prevent duplicate tracking (if same post tracked within 2 seconds)
   const now = Date.now();
   if (lastTrackedPost?.postId === post.id && now - lastTrackedPost.timestamp < 2000) {
@@ -161,8 +210,19 @@ export const trackTimeSpent = (userId: string, seconds: number) => {
 /**
  * Initialize user attributes on app load
  * Call this when the app starts or when user switches profiles
+ * Only initializes for Rohan (user ID '1')
  */
 export const initializeUserAttributes = (userId: string, team: string) => {
+  // Only initialize attributes for Rohan
+  if (userId !== ROHAN_USER_ID) {
+    return {
+      team: team,
+      reading_frequency: 'occasional' as const,
+      expertise_level: 'beginner' as const,
+      favorite_category: '' as const,
+    };
+  }
+  
   const behavior = getUserBehavior(userId);
   
   // Set team if not already set
@@ -209,6 +269,11 @@ export const getUserAttributes = (userId: string): UserAttributesData => {
  * Reset user behavior (for testing or profile switching)
  */
 export const resetUserBehavior = (userId: string) => {
+  // Only reset behavior for Rohan
+  if (userId !== ROHAN_USER_ID) {
+    return;
+  }
+  
   const key = `${STORAGE_KEY_PREFIX}${userId}`;
   localStorage.removeItem(key);
   console.log('🔄 User behavior reset for:', userId);
