@@ -7,6 +7,7 @@ export type PostCategory = 'Insight' | 'Incident' | 'Retrospective';
 
 export interface Author {
   id: string;
+  uid?: string; // Contentstack UID for creating references
   name: string;
   role: string;
   team: string;

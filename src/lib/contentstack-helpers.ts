@@ -26,6 +26,7 @@ export function mapContentstackAuthorToAuthor(
 
   return {
     id: csAuthor.author_id.toString(), // Convert number to string
+    uid: csAuthor.uid, // Contentstack UID for creating references
     name: csAuthor.full_name,
     role: csAuthor.role,
     team: teamName,

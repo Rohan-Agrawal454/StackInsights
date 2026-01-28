@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Save, Send, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen, X } from 'lucide-react';
+import { ArrowLeft, Send, Info, AlertCircle, CheckCircle, Target, TrendingUp, Lightbulb, BookOpen, X } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,21 +17,25 @@ import {
 import { Separator } from '@/components/ui/separator';
 import type { Post, PostCategory } from '@/types';
 import { getCategoryColor } from '@/lib/category-utils';
-import { fetchCreatePostContent, fetchCategories, getAllPosts } from '@/lib/contentstack-api';
+import { fetchCreatePostContent, fetchCategories, getAllPosts, getAllAuthors } from '@/lib/contentstack-api';
 import type { CreatePostContent, ContentstackCategory } from '@/types/contentstack';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { createAndPublishPost } from '@/lib/contentstack-management';
+import { useProfile } from '@/hooks/use-profile';
 
 export default function CreatePost() {
   const { toast } = useToast();
+  const { currentProfile } = useProfile();
   const [pageContent, setPageContent] = useState<CreatePostContent | null>(null);
   const [categories, setCategories] = useState<ContentstackCategory[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
   
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [category, setCategory] = useState<string>('');
-  const [featuredImage, setFeaturedImage] = useState('');
+  // const [featuredImage, setFeaturedImage] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTagInput, setCustomTagInput] = useState('');
   const [context, setContext] = useState('');
@@ -78,16 +82,18 @@ export default function CreatePost() {
     setSelectedTags(prev => prev.filter(t => t !== tag));
   };
 
-  const handleSaveDraft = () => {
-    if (!pageContent) return;
-    toast({
-      title: pageContent.toast_messages?.draft_saved_title || "Draft saved",
-      description: pageContent.toast_messages?.draft_saved_description || "Your post has been saved as a draft.",
-    });
-  };
+  // const handleSaveDraft = () => {
+  //   if (!pageContent) return;
+  //   toast({
+  //     title: pageContent.toast_messages?.draft_saved_title || "Draft saved",
+  //     description: pageContent.toast_messages?.draft_saved_description || "Your post has been saved as a draft.",
+  //   });
+  // };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!pageContent) return;
+    
+    // Validation
     if (!title || !excerpt || !category || !context) {
       toast({
         title: pageContent.toast_messages?.missing_fields_title || "Missing fields",
@@ -96,19 +102,96 @@ export default function CreatePost() {
       });
       return;
     }
-    toast({
-      title: pageContent.toast_messages?.published_title || "Post published!",
-      description: pageContent.toast_messages?.published_description || "Your post is now live and visible to the team.",
-    });
+
+    setIsPublishing(true);
+
+    try {
+      // Get author UID from current profile
+      const authors = await getAllAuthors();
+      const authorData = authors.find(a => a.id === currentProfile.id);
+      
+      if (!authorData || !authorData.uid) {
+        toast({
+          title: "Error",
+          description: "Could not find author information.",
+          variant: "destructive",
+        });
+        setIsPublishing(false);
+        return;
+      }
+
+      // Build content object based on category
+      const contentField: Record<string, string> = { context };
+      
+      if (category === 'Incident') {
+        contentField.problem = problem;
+        contentField.resolution = resolution;
+      } else if (category === 'Retrospective') {
+        contentField.achievements = achievements;
+        contentField.challenges = challenges;
+        contentField.improvements = improvements;
+      } else if (category === 'Insight') {
+        contentField.learnings = learnings;
+      }
+
+      // Prepare post data
+      const postData = {
+        title: `${category} - ${title}`, // Internal CMS title
+        title_post: title, // Display title
+        category: category,
+        excerpt: excerpt,
+        featured: false,
+        author_id: [{ uid: authorData.uid, _content_type_uid: 'rohan_author' }],
+        tags_post: selectedTags.join('\n'),
+        content: contentField,
+      };
+
+      // Create and publish post
+      const result = await createAndPublishPost(postData);
+
+      if (result.success) {
+        toast({
+          title: pageContent.toast_messages?.published_title || "Post published!",
+          description: pageContent.toast_messages?.published_description || "Your post is now live and visible to the team.",
+        });
+
+        // Reset form
+        setTitle('');
+        setExcerpt('');
+        setCategory('');
+        setSelectedTags([]);
+        setContext('');
+        setProblem('');
+        setResolution('');
+        setAchievements('');
+        setChallenges('');
+        setImprovements('');
+        setLearnings('');
+      } else {
+        toast({
+          title: "Publishing failed",
+          description: result.error || "Failed to publish post. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   if (!pageContent) {
     return null;
   }
 
-  const isInsight = category === 'insight';
-  const isIncident = category === 'incident';
-  const isRetrospective = category === 'retrospective';
+  const isInsight = category === 'Insight';
+  const isIncident = category === 'Incident';
+  const isRetrospective = category === 'Retrospective';
 
   return (
     <Layout>
@@ -125,13 +208,13 @@ export default function CreatePost() {
               <h1 className="text-2xl font-bold text-text-primary">{pageContent.page_header.page_title}</h1>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleSaveDraft}>
+              {/* <Button variant="outline" onClick={handleSaveDraft}>
                 <Save className="mr-2 h-4 w-4" />
                 {pageContent.action_buttons.save_draft_button}
-              </Button>
-              <Button onClick={handlePublish}>
+              </Button> */}
+              <Button onClick={handlePublish} disabled={isPublishing}>
                 <Send className="mr-2 h-4 w-4" />
-                {pageContent.action_buttons.publish_button}
+                {isPublishing ? 'Publishing...' : pageContent.action_buttons.publish_button}
               </Button>
             </div>
           </div>
@@ -168,30 +251,30 @@ export default function CreatePost() {
             </div>
 
             {/* Post Type */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
                 {pageContent.form_labels.post_type_label} <span className="text-destructive">*</span>
-              </Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="bg-card">
+                </Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger className="bg-card">
                   <SelectValue placeholder={pageContent.form_labels.post_type_placeholder} />
-                </SelectTrigger>
-                <SelectContent>
+                  </SelectTrigger>
+                  <SelectContent>
                   {categories.map((cat) => (
                     <SelectItem key={cat.uid} value={cat.category_value}>
                       {cat.category_label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               <p className="text-xs text-text-tertiary">{pageContent.form_labels.post_type_help_text}</p>
-            </div>
-
+              </div>
+              
             {/* Featured Image */}
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <Label htmlFor="featuredImage" className="text-sm font-medium">
                 Featured Image
-              </Label>
+                </Label>
               <Input
                 id="featuredImage"
                 type="url"
@@ -214,9 +297,9 @@ export default function CreatePost() {
                       e.currentTarget.alt = 'Invalid image URL';
                     }}
                   />
-                </div>
+              </div>
               )}
-            </div>
+            </div> */}
 
             {/* Tags */}
             <div className="space-y-2">
@@ -296,7 +379,7 @@ export default function CreatePost() {
                   className="min-h-[120px] bg-background"
                 />
               </div>
-
+              
               {/* Problem - For Insights and Incidents */}
               {(isInsight || isIncident) && (
                 <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -330,7 +413,7 @@ export default function CreatePost() {
                       <p className="text-xs text-text-tertiary">{pageContent.resolution_section.description}</p>
                     </div>
                   </div>
-                  <Textarea
+              <Textarea
                     placeholder={pageContent.resolution_section.placeholder}
                     value={resolution}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setResolution(e.target.value)}
